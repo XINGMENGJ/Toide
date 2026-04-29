@@ -10,6 +10,8 @@ set(CMAKE_AUTORCC ON)
 
 add_library(toide_client_core STATIC
     src/app/main_window.cpp
+    src/file_explorer/file_explorer_widget.cpp
+    src/workspace/workspace_manager.cpp
 )
 
 target_include_directories(toide_client_core
@@ -39,16 +41,26 @@ target_link_libraries(toide_client
         toide_client_core
 )
 
+function(add_toide_qt_test target)
+    qt_add_executable(${target}
+        ${ARGN}
+    )
+
+    target_link_libraries(${target}
+        PRIVATE
+            toide_client_core
+            Qt6::Test
+    )
+
+    add_test(NAME ${target} COMMAND ${target})
+endfunction()
+
 enable_testing()
 
-qt_add_executable(toide_client_tests
+add_toide_qt_test(toide_main_window_smoke_test
     tests/main_window_smoke_test.cpp
 )
 
-target_link_libraries(toide_client_tests
-    PRIVATE
-        toide_client_core
-        Qt6::Test
+add_toide_qt_test(toide_workspace_manager_test
+    tests/workspace_manager_test.cpp
 )
-
-add_test(NAME toide_client_tests COMMAND toide_client_tests)

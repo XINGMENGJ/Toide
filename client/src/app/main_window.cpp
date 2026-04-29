@@ -1,6 +1,10 @@
 #include "app/main_window.h"
 
+#include "file_explorer/file_explorer_widget.h"
+#include "workspace/workspace_manager.h"
+
 #include <QAction>
+#include <QFileDialog>
 #include <QLabel>
 #include <QListWidget>
 #include <QMenu>
@@ -10,10 +14,10 @@
 #include <QTabWidget>
 #include <QTextEdit>
 #include <QToolBar>
-#include <QTreeView>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
+    , workspaceManager_(new WorkspaceManager(this))
 {
     setWindowTitle(QStringLiteral("Toide"));
     resize(1280, 800);
@@ -22,6 +26,8 @@ MainWindow::MainWindow(QWidget *parent)
     createLayout();
 
     statusBar()->showMessage(QStringLiteral("Ready"));
+
+    connect(workspaceManager_, &WorkspaceManager::projectOpened, this, &MainWindow::openProjectDirectory);
 }
 
 void MainWindow::createActions()
@@ -31,6 +37,7 @@ void MainWindow::createActions()
 
     openProjectAction_ = fileMenu->addAction(QStringLiteral("&Open Project"));
     openProjectAction_->setObjectName(QStringLiteral("openProjectAction"));
+    connect(openProjectAction_, &QAction::triggered, this, &MainWindow::chooseProjectDirectory);
 
     fileMenu->addSeparator();
 
@@ -45,9 +52,7 @@ void MainWindow::createActions()
 
 void MainWindow::createLayout()
 {
-    auto *fileExplorer = new QTreeView(this);
-    fileExplorer->setObjectName(QStringLiteral("fileExplorerPanel"));
-    fileExplorer->setHeaderHidden(true);
+    fileExplorer_ = new FileExplorerWidget(this);
 
     auto *editorTabs = new QTabWidget(this);
     editorTabs->setObjectName(QStringLiteral("editorTabs"));
@@ -60,7 +65,7 @@ void MainWindow::createLayout()
 
     auto *mainSplitter = new QSplitter(Qt::Horizontal, this);
     mainSplitter->setObjectName(QStringLiteral("mainSplitter"));
-    mainSplitter->addWidget(fileExplorer);
+    mainSplitter->addWidget(fileExplorer_);
     mainSplitter->addWidget(editorTabs);
     mainSplitter->addWidget(collaborationPanel);
     mainSplitter->setStretchFactor(0, 1);
@@ -80,4 +85,22 @@ void MainWindow::createLayout()
     rootSplitter->setStretchFactor(1, 1);
 
     setCentralWidget(rootSplitter);
+}
+
+void MainWindow::chooseProjectDirectory()
+{
+    const auto selectedDirectory = QFileDialog::getExistingDirectory(
+        this,
+        QStringLiteral("Open Project"),
+        workspaceManager_->currentProjectPath());
+
+    if (!selectedDirectory.isEmpty()) {
+        workspaceManager_->openProject(selectedDirectory);
+    }
+}
+
+void MainWindow::openProjectDirectory(const QString &projectPath)
+{
+    fileExplorer_->setProjectRoot(projectPath);
+    statusBar()->showMessage(QStringLiteral("Opened project: %1").arg(projectPath));
 }

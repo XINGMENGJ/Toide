@@ -10,6 +10,8 @@
 #include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
+#include <QMessageBox>
+#include <QKeySequence>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTabWidget>
@@ -39,6 +41,11 @@ void MainWindow::createActions()
     openProjectAction_->setObjectName(QStringLiteral("openProjectAction"));
     connect(openProjectAction_, &QAction::triggered, this, &MainWindow::chooseProjectDirectory);
 
+    saveAction_ = fileMenu->addAction(QStringLiteral("&Save"));
+    saveAction_->setObjectName(QStringLiteral("saveAction"));
+    saveAction_->setShortcut(QKeySequence::Save);
+    connect(saveAction_, &QAction::triggered, this, &MainWindow::saveCurrentFile);
+
     fileMenu->addSeparator();
 
     exitAction_ = fileMenu->addAction(QStringLiteral("E&xit"));
@@ -48,6 +55,7 @@ void MainWindow::createActions()
     auto *mainToolBar = addToolBar(QStringLiteral("Main"));
     mainToolBar->setObjectName(QStringLiteral("mainToolBar"));
     mainToolBar->addAction(openProjectAction_);
+    mainToolBar->addAction(saveAction_);
 }
 
 void MainWindow::createLayout()
@@ -102,4 +110,14 @@ void MainWindow::openProjectDirectory(const QString &projectPath)
 {
     fileExplorer_->setProjectRoot(projectPath);
     statusBar()->showMessage(QStringLiteral("Opened project: %1").arg(projectPath));
+}
+
+void MainWindow::saveCurrentFile()
+{
+    if (editorArea_->saveCurrentFile()) {
+        statusBar()->showMessage(QStringLiteral("File saved"), 3000);
+        return;
+    }
+
+    QMessageBox::warning(this, QStringLiteral("Save Failed"), QStringLiteral("No file is open or the file could not be saved."));
 }

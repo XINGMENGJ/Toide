@@ -48,6 +48,21 @@ bool EditorAreaWidget::openFile(const QString &filePath)
     return true;
 }
 
+bool EditorAreaWidget::saveCurrentFile()
+{
+    auto *editor = qobject_cast<EditorTab *>(tabs_->currentWidget());
+    if (editor == nullptr) {
+        return false;
+    }
+
+    const auto saved = editor->save();
+    if (saved) {
+        updateTabTitle(tabs_->currentIndex());
+    }
+
+    return saved;
+}
+
 int EditorAreaWidget::findTabByFilePath(const QString &filePath) const
 {
     for (int index = 0; index < tabs_->count(); ++index) {

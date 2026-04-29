@@ -15,8 +15,10 @@ private:
     void createLayout();
     void chooseProjectDirectory();
     void openProjectDirectory(const QString &projectPath);
+    void saveCurrentFile();
 
     QAction *openProjectAction_ = nullptr;
+    QAction *saveAction_ = nullptr;
     QAction *exitAction_ = nullptr;
     WorkspaceManager *workspaceManager_ = nullptr;
     FileExplorerWidget *fileExplorer_ = nullptr;

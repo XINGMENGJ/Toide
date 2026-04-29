@@ -12,6 +12,7 @@ public:
 
 public slots:
     bool openFile(const QString &filePath);
+    bool saveCurrentFile();
 
 private:
     [[nodiscard]] int findTabByFilePath(const QString &filePath) const;

@@ -66,6 +66,8 @@
 - Git 状态面板打开终端反馈已提交并推送：`f0b3969 feat: show git terminal opening feedback`。
 - Git 状态面板无状态内容时点击 `Copy status` 会显示 `No status to copy`，并不会覆盖现有剪贴板内容。
 - Git 状态解析里的 `QString::split(..., SkipEmptyParts)` 已按 Qt 主版本兼容，避免旧 Kit 下 `Qt::SkipEmptyParts` 不存在导致编译失败。
+- Git 状态面板空状态复制和 `SkipEmptyParts` 兼容修复已提交并推送：`aa6dd71 fix: handle empty git status copy`。
+- Git 状态面板提供 `Copy branch` 按钮，可复制当前分支名，并在 Windows 剪贴板短暂占用时进行短重试。
 
 ## 最近一次问题
 
@@ -84,8 +86,8 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `f0b3969 feat: show git terminal opening feedback`。
-- 本轮未提交改动：Git 状态面板无状态内容时复制给出明确提示；修复 `SkipEmptyParts` 兼容性编译错误。
+- 已提交并推送 `aa6dd71 fix: handle empty git status copy`。
+- 本轮未提交改动：Git 状态面板复制当前分支名。
 
 ## 下一步建议
 

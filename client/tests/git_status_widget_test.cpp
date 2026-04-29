@@ -22,6 +22,7 @@ private slots:
     void copyStatusCopiesCurrentStatusToClipboard();
     void copyStatusShowsCopiedFeedback();
     void copyStatusWithoutStatusShowsHelpfulFeedback();
+    void copyBranchCopiesCurrentBranchToClipboard();
     void openTerminalRequestsCurrentWorkspace();
     void openTerminalShowsOpeningFeedback();
     void loadStatusFromNonGitWorkspaceShowsHelpfulMessage();
@@ -33,6 +34,21 @@ static bool runGit(const QString &workingDirectory, const QStringList &arguments
     process.setWorkingDirectory(workingDirectory);
     process.start(QStringLiteral("git"), arguments);
     return process.waitForFinished(3000) && process.exitCode() == 0;
+}
+
+static bool setClipboardTextForTest(const QString &text)
+{
+    auto *clipboard = QGuiApplication::clipboard();
+    for (int attempt = 0; attempt < 20; ++attempt) {
+        clipboard->setText(text);
+        if (clipboard->text() == text) {
+            return true;
+        }
+
+        QTest::qWait(50);
+    }
+
+    return false;
 }
 
 void GitStatusWidgetTest::loadStatusFromGitWorkspaceShowsBranchAndChanges()
@@ -222,11 +238,37 @@ void GitStatusWidgetTest::copyStatusWithoutStatusShowsHelpfulFeedback()
     auto *copyButton = widget.findChild<QPushButton *>(QStringLiteral("copyGitStatusButton"));
     QVERIFY(copyButton != nullptr);
 
-    QGuiApplication::clipboard()->setText(QStringLiteral("keep me"));
+    QVERIFY(setClipboardTextForTest(QStringLiteral("keep me")));
     copyButton->click();
 
     QVERIFY(statusLabel->text().contains(QStringLiteral("No status to copy")));
     QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("keep me"));
+}
+
+void GitStatusWidgetTest::copyBranchCopiesCurrentBranchToClipboard()
+{
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("init")}));
+
+    GitStatusWidget widget;
+    QVERIFY(widget.loadStatusFromWorkspace(workspace.path()));
+
+    auto *statusView = widget.findChild<QTextEdit *>(QStringLiteral("gitStatusView"));
+    QVERIFY(statusView != nullptr);
+    const auto statusText = statusView->toPlainText();
+    QVERIFY(statusText.contains(QStringLiteral("Branch")));
+
+    auto *copyBranchButton = widget.findChild<QPushButton *>(QStringLiteral("copyGitBranchButton"));
+    QVERIFY(copyBranchButton != nullptr);
+    auto *statusLabel = widget.findChild<QLabel *>(QStringLiteral("gitRefreshStatusLabel"));
+    QVERIFY(statusLabel != nullptr);
+
+    copyBranchButton->click();
+
+    QVERIFY(!QGuiApplication::clipboard()->text().isEmpty());
+    QVERIFY(statusText.contains(QGuiApplication::clipboard()->text()));
+    QVERIFY(statusLabel->text().contains(QStringLiteral("Copied branch")));
 }
 
 void GitStatusWidgetTest::openTerminalRequestsCurrentWorkspace()

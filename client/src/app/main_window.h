@@ -6,6 +6,7 @@
 
 class FileExplorerWidget;
 class EditorAreaWidget;
+class GitStatusWidget;
 class RecentProjectStore;
 class TaskRunnerWidget;
 class WorkspaceManager;
@@ -30,5 +31,6 @@ private:
     WorkspaceManager *workspaceManager_ = nullptr;
     FileExplorerWidget *fileExplorer_ = nullptr;
     EditorAreaWidget *editorArea_ = nullptr;
+    GitStatusWidget *gitStatus_ = nullptr;
     TaskRunnerWidget *taskRunner_ = nullptr;
 };

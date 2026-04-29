@@ -48,6 +48,7 @@
 - Tasks 面板会在任务结束后解析输出中的编译诊断，并追加 `Diagnostics:` 摘要。
 - 编辑器区域支持 `openFileAt(file, line, column)`，可打开文件并移动光标到指定行列。
 - Tasks 面板的诊断摘要项支持点击，点击后会通过主窗口打开对应文件并跳转到行列位置。
+- Git 标签页起步版可在打开工作区时显示 `git status --short --branch`，非 Git 目录会显示提示。
 
 ## 最近一次问题
 
@@ -65,9 +66,9 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `61d59db feat: summarize compiler diagnostics in tasks`。
-- 本轮未提交改动：Tasks 诊断摘要点击打开文件位置。
+- 已提交并推送 `a3a6707 feat: open diagnostics from task output`。
+- 本轮未提交改动：Git 状态面板起步版和对应测试。
 
 ## 下一步建议
 
-下一步可以把诊断摘要从纯文本输出升级为更清晰的独立列表，或继续做 Git 状态面板。
+下一步可以继续完善 Git 面板的 staged/unstaged 分组、刷新状态提示和常用操作按钮。

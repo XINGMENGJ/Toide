@@ -17,6 +17,7 @@ private slots:
     void loadStatusFromGitWorkspaceShowsBranchAndChanges();
     void loadStatusFromCleanGitWorkspaceShowsCleanMessage();
     void loadStatusFromGitWorkspaceGroupsChanges();
+    void loadStatusFromGitWorkspaceShowsChangeSummaryCounts();
     void loadStatusShowsRefreshResult();
     void copyStatusCopiesCurrentStatusToClipboard();
     void openTerminalRequestsCurrentWorkspace();
@@ -109,6 +110,41 @@ void GitStatusWidgetTest::loadStatusFromGitWorkspaceGroupsChanges()
     QVERIFY(text.contains(QStringLiteral("Untracked")));
     QVERIFY(text.contains(QStringLiteral("staged.txt")));
     QVERIFY(text.contains(QStringLiteral("untracked.txt")));
+}
+
+void GitStatusWidgetTest::loadStatusFromGitWorkspaceShowsChangeSummaryCounts()
+{
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("init")}));
+
+    QFile stagedFile(workspace.filePath(QStringLiteral("staged.txt")));
+    QVERIFY(stagedFile.open(QIODevice::WriteOnly | QIODevice::Text));
+    stagedFile.write("staged\n");
+    stagedFile.close();
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("add"), QStringLiteral("staged.txt")}));
+
+    QFile unstagedFile(workspace.filePath(QStringLiteral("staged.txt")));
+    QVERIFY(unstagedFile.open(QIODevice::Append | QIODevice::Text));
+    unstagedFile.write("unstaged\n");
+    unstagedFile.close();
+
+    QFile untrackedFile(workspace.filePath(QStringLiteral("untracked.txt")));
+    QVERIFY(untrackedFile.open(QIODevice::WriteOnly | QIODevice::Text));
+    untrackedFile.write("untracked\n");
+    untrackedFile.close();
+
+    GitStatusWidget widget;
+    QVERIFY(widget.loadStatusFromWorkspace(workspace.path()));
+
+    auto *statusView = widget.findChild<QTextEdit *>(QStringLiteral("gitStatusView"));
+    QVERIFY(statusView != nullptr);
+
+    const auto text = statusView->toPlainText();
+    QVERIFY(text.contains(QStringLiteral("Summary")));
+    QVERIFY(text.contains(QStringLiteral("Staged: 1")));
+    QVERIFY(text.contains(QStringLiteral("Unstaged: 1")));
+    QVERIFY(text.contains(QStringLiteral("Untracked: 1")));
 }
 
 void GitStatusWidgetTest::loadStatusShowsRefreshResult()

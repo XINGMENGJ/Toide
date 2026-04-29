@@ -13,6 +13,7 @@ add_library(toide_client_core STATIC
     src/editor/editor_area_widget.cpp
     src/editor/editor_tab.cpp
     src/file_explorer/file_explorer_widget.cpp
+    src/git/git_status_widget.cpp
     src/task_runner/task_config.cpp
     src/task_runner/task_diagnostic_parser.cpp
     src/task_runner/task_execution_request.cpp
@@ -87,6 +88,10 @@ add_toide_qt_test(toide_editor_area_widget_test
 
 add_toide_qt_test(toide_recent_project_store_test
     tests/recent_project_store_test.cpp
+)
+
+add_toide_qt_test(toide_git_status_widget_test
+    tests/git_status_widget_test.cpp
 )
 
 add_toide_qt_test(toide_task_config_test

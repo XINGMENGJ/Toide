@@ -2,6 +2,7 @@
 
 #include "editor/editor_area_widget.h"
 #include "file_explorer/file_explorer_widget.h"
+#include "git/git_status_widget.h"
 #include "task_runner/task_runner_widget.h"
 #include "workspace/recent_project_store.h"
 #include "workspace/workspace_manager.h"
@@ -90,8 +91,9 @@ void MainWindow::createLayout()
     auto *outputTabs = new QTabWidget(this);
     outputTabs->setObjectName(QStringLiteral("outputTabs"));
     taskRunner_ = new TaskRunnerWidget(outputTabs);
+    gitStatus_ = new GitStatusWidget(outputTabs);
     outputTabs->addTab(taskRunner_, QStringLiteral("Tasks"));
-    outputTabs->addTab(new QLabel(QStringLiteral("Git status will appear here."), outputTabs), QStringLiteral("Git"));
+    outputTabs->addTab(gitStatus_, QStringLiteral("Git"));
 
     auto *rootSplitter = new QSplitter(Qt::Vertical, this);
     rootSplitter->setObjectName(QStringLiteral("rootSplitter"));
@@ -142,6 +144,7 @@ void MainWindow::openProjectDirectory(const QString &projectPath)
     recentProjectStore_->addProject(projectPath);
     fileExplorer_->setProjectRoot(projectPath);
     taskRunner_->loadTasksFromWorkspace(projectPath);
+    gitStatus_->loadStatusFromWorkspace(projectPath);
     statusBar()->showMessage(QStringLiteral("Opened project: %1").arg(projectPath));
 }
 

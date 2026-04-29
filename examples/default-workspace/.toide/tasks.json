@@ -7,12 +7,17 @@
     },
     {
       "name": "Build Example",
-      "command": "if not exist build mkdir build && g++ -std=c++20 -Wall -Wextra src\\hello_toide.cpp -o build\\hello_toide.exe",
+      "command": "call ..\\..\\qt6.7-env.cmd >nul && (mkdir build 2>nul & where g++ && g++ --version && g++ -std=gnu++2a -Wall -Wextra src\\hello_toide.cpp -o build\\hello_toide.exe && echo Built build\\hello_toide.exe)",
       "workingDirectory": "${workspaceRoot}"
     },
     {
       "name": "Run Example",
-      "command": "build\\hello_toide.exe",
+      "command": "call ..\\..\\qt6.7-env.cmd >nul && if exist build\\hello_toide.exe (build\\hello_toide.exe) else (echo Missing build\\hello_toide.exe. Run Build Example first. && exit /b 1)",
+      "workingDirectory": "${workspaceRoot}"
+    },
+    {
+      "name": "Build Diagnostics Demo",
+      "command": "call ..\\..\\qt6.7-env.cmd >nul && (mkdir build 2>nul & where g++ && g++ --version && g++ -std=gnu++2a -Wall -Wextra src\\diagnostic_demo.cpp -o build\\diagnostic_demo.exe)",
       "workingDirectory": "${workspaceRoot}"
     },
     {

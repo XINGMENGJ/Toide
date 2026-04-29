@@ -2,6 +2,7 @@
 
 #include "git/git_status_widget.h"
 
+#include <QLabel>
 #include <QProcess>
 #include <QTemporaryDir>
 #include <QTextEdit>
@@ -12,6 +13,7 @@ class GitStatusWidgetTest final : public QObject {
 private slots:
     void loadStatusFromGitWorkspaceShowsBranchAndChanges();
     void loadStatusFromGitWorkspaceGroupsChanges();
+    void loadStatusShowsRefreshResult();
     void loadStatusFromNonGitWorkspaceShowsHelpfulMessage();
 };
 
@@ -78,6 +80,25 @@ void GitStatusWidgetTest::loadStatusFromGitWorkspaceGroupsChanges()
     QVERIFY(text.contains(QStringLiteral("Untracked")));
     QVERIFY(text.contains(QStringLiteral("staged.txt")));
     QVERIFY(text.contains(QStringLiteral("untracked.txt")));
+}
+
+void GitStatusWidgetTest::loadStatusShowsRefreshResult()
+{
+    QTemporaryDir gitWorkspace;
+    QVERIFY(gitWorkspace.isValid());
+    QVERIFY(runGit(gitWorkspace.path(), QStringList{QStringLiteral("init")}));
+
+    GitStatusWidget widget;
+    auto *statusLabel = widget.findChild<QLabel *>(QStringLiteral("gitRefreshStatusLabel"));
+    QVERIFY(statusLabel != nullptr);
+
+    QVERIFY(widget.loadStatusFromWorkspace(gitWorkspace.path()));
+    QVERIFY(statusLabel->text().contains(QStringLiteral("Refreshed")));
+
+    QTemporaryDir nonGitWorkspace;
+    QVERIFY(nonGitWorkspace.isValid());
+    QVERIFY(!widget.loadStatusFromWorkspace(nonGitWorkspace.path()));
+    QVERIFY(statusLabel->text().contains(QStringLiteral("Not a Git repository")));
 }
 
 void GitStatusWidgetTest::loadStatusFromNonGitWorkspaceShowsHelpfulMessage()

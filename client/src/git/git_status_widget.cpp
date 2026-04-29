@@ -1,6 +1,7 @@
 #include "git/git_status_widget.h"
 
 #include <QHBoxLayout>
+#include <QLabel>
 #include <QProcess>
 #include <QPushButton>
 #include <QTextEdit>
@@ -9,13 +10,16 @@
 GitStatusWidget::GitStatusWidget(QWidget *parent)
     : QWidget(parent)
     , refreshButton_(new QPushButton(QStringLiteral("Refresh"), this))
+    , refreshStatusLabel_(new QLabel(QStringLiteral("Not refreshed"), this))
     , statusView_(new QTextEdit(this))
 {
     refreshButton_->setObjectName(QStringLiteral("refreshGitStatusButton"));
+    refreshStatusLabel_->setObjectName(QStringLiteral("gitRefreshStatusLabel"));
     statusView_->setObjectName(QStringLiteral("gitStatusView"));
     statusView_->setReadOnly(true);
 
     auto *toolbarLayout = new QHBoxLayout;
+    toolbarLayout->addWidget(refreshStatusLabel_, 1);
     toolbarLayout->addStretch(1);
     toolbarLayout->addWidget(refreshButton_);
 
@@ -33,6 +37,7 @@ bool GitStatusWidget::loadStatusFromWorkspace(const QString &workspaceRoot)
 {
     workspaceRoot_ = workspaceRoot;
     if (workspaceRoot_.isEmpty()) {
+        refreshStatusLabel_->setText(QStringLiteral("No workspace is open."));
         statusView_->setPlainText(QStringLiteral("No workspace is open."));
         return false;
     }
@@ -42,6 +47,7 @@ bool GitStatusWidget::loadStatusFromWorkspace(const QString &workspaceRoot)
     process.start(QStringLiteral("git"), QStringList{QStringLiteral("status"), QStringLiteral("--short"), QStringLiteral("--branch")});
     if (!process.waitForFinished(3000)) {
         process.kill();
+        refreshStatusLabel_->setText(QStringLiteral("Git status timed out."));
         statusView_->setPlainText(QStringLiteral("Git status timed out."));
         return false;
     }
@@ -49,10 +55,12 @@ bool GitStatusWidget::loadStatusFromWorkspace(const QString &workspaceRoot)
     const auto output = QString::fromLocal8Bit(process.readAllStandardOutput());
     const auto errorOutput = QString::fromLocal8Bit(process.readAllStandardError());
     if (process.exitCode() != 0) {
+        refreshStatusLabel_->setText(QStringLiteral("Not a Git repository."));
         statusView_->setPlainText(QStringLiteral("Not a Git repository.\n%1").arg(errorOutput.trimmed()));
         return false;
     }
 
+    refreshStatusLabel_->setText(QStringLiteral("Refreshed"));
     statusView_->setPlainText(formatStatusOutput(output));
     return true;
 }

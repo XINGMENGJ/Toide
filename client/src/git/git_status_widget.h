@@ -3,6 +3,7 @@
 #include <QWidget>
 
 class QPushButton;
+class QLabel;
 class QTextEdit;
 
 class GitStatusWidget final : public QWidget {
@@ -18,5 +19,6 @@ private:
 
     QString workspaceRoot_;
     QPushButton *refreshButton_ = nullptr;
+    QLabel *refreshStatusLabel_ = nullptr;
     QTextEdit *statusView_ = nullptr;
 };

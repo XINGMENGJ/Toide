@@ -41,6 +41,10 @@
 - 默认示例工作区提供 `Build Example` 和 `Run Example` 任务，可演示基础 C++ 编译/运行流程。
 - Tasks 面板在任务自然结束后显示 `Succeeded` 或 `Failed: exit code N`，让编译结果更清晰。
 - 编译诊断解析器可识别 g++ 和 MSVC 风格的 `error` / `warning` / `note` 输出，提取文件、行列号、级别和消息。
+- 默认示例工作区提供 `diagnostic_demo.cpp` 和 `Build Diagnostics Demo` 任务，可故意触发编译错误来验证诊断功能。
+- 默认示例工作区的编译任务会先加载 `qt6.7-env.cmd`，避免程序内 PATH 缺少 `g++` 或调用旧编译器。
+- 默认示例工作区的编译任务不再使用 `if not exist build mkdir build && ...`，避免 `build` 目录已存在时跳过真正的编译命令。
+- `Run Example` 也会加载 `qt6.7-env.cmd`，避免运行示例 exe 时缺少 MinGW 运行库 DLL；如果 `build\\hello_toide.exe` 缺失则提示先运行 `Build Example`。
 
 ## 最近一次问题
 
@@ -58,8 +62,8 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `ee55e15 feat: show task result status`。
-- 本轮未提交改动：编译诊断解析器、对应测试，以及 CMake/qmake 构建清单更新。
+- 已提交并推送 `6dc9baf feat: parse compiler diagnostics`。
+- 本轮未提交改动：默认示例工作区新增诊断验证文件、任务和说明文档，并修复示例编译任务的环境初始化和缺失 exe 提示。
 
 ## 下一步建议
 

@@ -3,6 +3,7 @@
 #include <QMainWindow>
 
 class FileExplorerWidget;
+class EditorAreaWidget;
 class WorkspaceManager;
 
 class MainWindow final : public QMainWindow {
@@ -19,4 +20,5 @@ private:
     QAction *exitAction_ = nullptr;
     WorkspaceManager *workspaceManager_ = nullptr;
     FileExplorerWidget *fileExplorer_ = nullptr;
+    EditorAreaWidget *editorArea_ = nullptr;
 };

@@ -10,6 +10,8 @@ set(CMAKE_AUTORCC ON)
 
 add_library(toide_client_core STATIC
     src/app/main_window.cpp
+    src/editor/editor_area_widget.cpp
+    src/editor/editor_tab.cpp
     src/file_explorer/file_explorer_widget.cpp
     src/workspace/workspace_manager.cpp
 )
@@ -63,4 +65,12 @@ add_toide_qt_test(toide_main_window_smoke_test
 
 add_toide_qt_test(toide_workspace_manager_test
     tests/workspace_manager_test.cpp
+)
+
+add_toide_qt_test(toide_editor_tab_test
+    tests/editor_tab_test.cpp
+)
+
+add_toide_qt_test(toide_editor_area_widget_test
+    tests/editor_area_widget_test.cpp
 )

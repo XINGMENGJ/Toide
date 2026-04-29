@@ -11,11 +11,15 @@ INCLUDEPATH += client/src
 SOURCES += \
     client/src/main.cpp \
     client/src/app/main_window.cpp \
+    client/src/editor/editor_area_widget.cpp \
+    client/src/editor/editor_tab.cpp \
     client/src/file_explorer/file_explorer_widget.cpp \
     client/src/workspace/workspace_manager.cpp
 
 HEADERS += \
     client/src/app/main_window.h \
+    client/src/editor/editor_area_widget.h \
+    client/src/editor/editor_tab.h \
     client/src/file_explorer/file_explorer_widget.h \
     client/src/workspace/workspace_manager.h
 

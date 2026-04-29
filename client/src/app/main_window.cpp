@@ -1,5 +1,6 @@
 #include "app/main_window.h"
 
+#include "editor/editor_area_widget.h"
 #include "file_explorer/file_explorer_widget.h"
 #include "workspace/workspace_manager.h"
 
@@ -12,7 +13,6 @@
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTabWidget>
-#include <QTextEdit>
 #include <QToolBar>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -54,10 +54,7 @@ void MainWindow::createLayout()
 {
     fileExplorer_ = new FileExplorerWidget(this);
 
-    auto *editorTabs = new QTabWidget(this);
-    editorTabs->setObjectName(QStringLiteral("editorTabs"));
-    editorTabs->setTabsClosable(true);
-    editorTabs->addTab(new QTextEdit(editorTabs), QStringLiteral("Welcome"));
+    editorArea_ = new EditorAreaWidget(this);
 
     auto *collaborationPanel = new QListWidget(this);
     collaborationPanel->setObjectName(QStringLiteral("collaborationPanel"));
@@ -66,7 +63,7 @@ void MainWindow::createLayout()
     auto *mainSplitter = new QSplitter(Qt::Horizontal, this);
     mainSplitter->setObjectName(QStringLiteral("mainSplitter"));
     mainSplitter->addWidget(fileExplorer_);
-    mainSplitter->addWidget(editorTabs);
+    mainSplitter->addWidget(editorArea_);
     mainSplitter->addWidget(collaborationPanel);
     mainSplitter->setStretchFactor(0, 1);
     mainSplitter->setStretchFactor(1, 4);
@@ -85,6 +82,8 @@ void MainWindow::createLayout()
     rootSplitter->setStretchFactor(1, 1);
 
     setCentralWidget(rootSplitter);
+
+    connect(fileExplorer_, &FileExplorerWidget::fileOpenRequested, editorArea_, &EditorAreaWidget::openFile);
 }
 
 void MainWindow::chooseProjectDirectory()

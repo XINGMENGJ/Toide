@@ -13,6 +13,7 @@ public:
     [[nodiscard]] QString currentProjectName() const;
 
     bool openProject(const QString &projectPath);
+    static QString findDefaultExampleWorkspace(const QStringList &searchRoots);
 
 signals:
     void projectOpened(const QString &projectPath);

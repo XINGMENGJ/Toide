@@ -32,6 +32,10 @@ target_link_libraries(toide_client_core
 )
 
 target_compile_features(toide_client_core PUBLIC cxx_std_20)
+target_compile_definitions(toide_client_core
+    PUBLIC
+        TOIDE_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+)
 
 if(MSVC)
     target_compile_options(toide_client_core PRIVATE /W4 /permissive-)

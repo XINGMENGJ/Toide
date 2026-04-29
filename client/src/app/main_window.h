@@ -19,6 +19,7 @@ private:
     void createActions();
     void createLayout();
     void chooseProjectDirectory();
+    void openDefaultWorkspace();
     void openProjectDirectory(const QString &projectPath);
     void saveCurrentFile();
 

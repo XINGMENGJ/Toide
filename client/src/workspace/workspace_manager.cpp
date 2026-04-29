@@ -33,3 +33,26 @@ bool WorkspaceManager::openProject(const QString &projectPath)
     emit projectOpened(currentProjectPath_);
     return true;
 }
+
+QString WorkspaceManager::findDefaultExampleWorkspace(const QStringList &searchRoots)
+{
+    for (const auto &rootPath : searchRoots) {
+        QDir directory(rootPath);
+        if (!directory.exists()) {
+            continue;
+        }
+
+        while (true) {
+            const auto candidate = QDir::cleanPath(directory.absoluteFilePath(QStringLiteral("examples/default-workspace")));
+            if (QFileInfo(candidate).isDir()) {
+                return candidate;
+            }
+
+            if (!directory.cdUp()) {
+                break;
+            }
+        }
+    }
+
+    return {};
+}

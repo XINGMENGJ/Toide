@@ -8,6 +8,8 @@ TARGET = Toide
 
 INCLUDEPATH += client/src
 
+DEFINES += TOIDE_SOURCE_DIR=\\\"$$PWD\\\"
+
 SOURCES += \
     client/src/main.cpp \
     client/src/app/main_window.cpp \
@@ -40,4 +42,4 @@ RCC_DIR = build/qmake/rcc
 UI_DIR = build/qmake/ui
 
 win32-msvc:QMAKE_CXXFLAGS += /std:c++20 /W4 /permissive-
-win32-g++:QMAKE_CXXFLAGS += -std=gnu++20 -Wall -Wextra -Wpedantic
+win32-g++:QMAKE_CXXFLAGS += -Wall -Wextra -Wpedantic

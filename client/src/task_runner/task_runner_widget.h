@@ -1,6 +1,7 @@
 #pragma once
 
 #include "task_runner/task_config.h"
+#include "task_runner/task_process_runner.h"
 
 #include <QWidget>
 
@@ -17,8 +18,13 @@ public:
     bool loadTasksFromWorkspace(const QString &workspaceRoot);
 
 private:
+    void runSelectedTask();
+    void appendOutput(const QString &output);
+
     QComboBox *taskSelector_ = nullptr;
     QPushButton *runButton_ = nullptr;
     QTextEdit *outputView_ = nullptr;
     TaskConfig taskConfig_;
+    QString workspaceRoot_;
+    TaskProcessRunner processRunner_;
 };

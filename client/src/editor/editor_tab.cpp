@@ -3,6 +3,8 @@
 #include <QFile>
 #include <QPlainTextEdit>
 #include <QSignalBlocker>
+#include <QTextBlock>
+#include <QTextCursor>
 #include <QVBoxLayout>
 
 EditorTab::EditorTab(QWidget *parent)
@@ -68,6 +70,25 @@ bool EditorTab::save()
 void EditorTab::setText(const QString &text)
 {
     editor_->setPlainText(text);
+}
+
+void EditorTab::moveCursorTo(int line, int column)
+{
+    const auto targetLine = qMax(1, line);
+    const auto targetColumn = qMax(1, column);
+
+    const auto block = editor_->document()->findBlockByNumber(targetLine - 1);
+    QTextCursor cursor;
+    if (!block.isValid()) {
+        cursor = editor_->textCursor();
+        cursor.movePosition(QTextCursor::End);
+    } else {
+        cursor = QTextCursor(block);
+        cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, targetColumn - 1);
+    }
+
+    editor_->setTextCursor(cursor);
+    editor_->setFocus();
 }
 
 void EditorTab::setDirty(bool dirty)

@@ -19,10 +19,13 @@ signals:
 
 private:
     static QString formatStatusOutput(const QString &statusOutput);
+    static QString parseBranchName(const QString &statusOutput);
 
     QString workspaceRoot_;
+    QString currentBranchName_;
     QPushButton *refreshButton_ = nullptr;
     QPushButton *copyButton_ = nullptr;
+    QPushButton *copyBranchButton_ = nullptr;
     QPushButton *openTerminalButton_ = nullptr;
     QLabel *refreshStatusLabel_ = nullptr;
     QTextEdit *statusView_ = nullptr;

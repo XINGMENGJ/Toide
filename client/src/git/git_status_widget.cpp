@@ -1,25 +1,49 @@
 #include "git/git_status_widget.h"
 
 #include <QClipboard>
+#include <QCoreApplication>
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QProcess>
 #include <QPushButton>
 #include <QTextEdit>
+#include <QThread>
 #include <QVBoxLayout>
 #include <QtGlobal>
+
+namespace {
+
+bool copyTextToClipboard(const QString &text)
+{
+    auto *clipboard = QGuiApplication::clipboard();
+    for (int attempt = 0; attempt < 10; ++attempt) {
+        clipboard->setText(text);
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 25);
+        if (clipboard->text() == text) {
+            return true;
+        }
+
+        QThread::msleep(25);
+    }
+
+    return false;
+}
+
+} // namespace
 
 GitStatusWidget::GitStatusWidget(QWidget *parent)
     : QWidget(parent)
     , refreshButton_(new QPushButton(QStringLiteral("Refresh"), this))
     , copyButton_(new QPushButton(QStringLiteral("Copy status"), this))
+    , copyBranchButton_(new QPushButton(QStringLiteral("Copy branch"), this))
     , openTerminalButton_(new QPushButton(QStringLiteral("Open terminal"), this))
     , refreshStatusLabel_(new QLabel(QStringLiteral("Not refreshed"), this))
     , statusView_(new QTextEdit(this))
 {
     refreshButton_->setObjectName(QStringLiteral("refreshGitStatusButton"));
     copyButton_->setObjectName(QStringLiteral("copyGitStatusButton"));
+    copyBranchButton_->setObjectName(QStringLiteral("copyGitBranchButton"));
     openTerminalButton_->setObjectName(QStringLiteral("openGitTerminalButton"));
     refreshStatusLabel_->setObjectName(QStringLiteral("gitRefreshStatusLabel"));
     statusView_->setObjectName(QStringLiteral("gitStatusView"));
@@ -29,6 +53,7 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
     toolbarLayout->addWidget(refreshStatusLabel_, 1);
     toolbarLayout->addStretch(1);
     toolbarLayout->addWidget(openTerminalButton_);
+    toolbarLayout->addWidget(copyBranchButton_);
     toolbarLayout->addWidget(copyButton_);
     toolbarLayout->addWidget(refreshButton_);
 
@@ -47,8 +72,19 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
             return;
         }
 
-        QGuiApplication::clipboard()->setText(statusText);
-        refreshStatusLabel_->setText(QStringLiteral("Copied status"));
+        refreshStatusLabel_->setText(copyTextToClipboard(statusText)
+                                         ? QStringLiteral("Copied status")
+                                         : QStringLiteral("Could not copy status"));
+    });
+    connect(copyBranchButton_, &QPushButton::clicked, this, [this]() {
+        if (currentBranchName_.isEmpty()) {
+            refreshStatusLabel_->setText(QStringLiteral("No branch to copy"));
+            return;
+        }
+
+        refreshStatusLabel_->setText(copyTextToClipboard(currentBranchName_)
+                                         ? QStringLiteral("Copied branch")
+                                         : QStringLiteral("Could not copy branch"));
     });
     connect(openTerminalButton_, &QPushButton::clicked, this, [this]() {
         if (workspaceRoot_.isEmpty()) {
@@ -64,6 +100,7 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
 bool GitStatusWidget::loadStatusFromWorkspace(const QString &workspaceRoot)
 {
     workspaceRoot_ = workspaceRoot;
+    currentBranchName_.clear();
     if (workspaceRoot_.isEmpty()) {
         refreshStatusLabel_->setText(QStringLiteral("No workspace is open."));
         statusView_->setPlainText(QStringLiteral("No workspace is open."));
@@ -88,9 +125,35 @@ bool GitStatusWidget::loadStatusFromWorkspace(const QString &workspaceRoot)
         return false;
     }
 
+    currentBranchName_ = parseBranchName(output);
     refreshStatusLabel_->setText(QStringLiteral("Refreshed"));
     statusView_->setPlainText(formatStatusOutput(output));
     return true;
+}
+
+QString GitStatusWidget::parseBranchName(const QString &statusOutput)
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const auto lines = statusOutput.split(QLatin1Char('\n'), QString::SkipEmptyParts);
+#else
+    const auto lines = statusOutput.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+#endif
+
+    for (const auto &line : lines) {
+        if (!line.startsWith(QStringLiteral("##"))) {
+            continue;
+        }
+
+        const auto branchLine = line.mid(3).trimmed();
+        const auto trackingSeparator = branchLine.indexOf(QStringLiteral("..."));
+        if (trackingSeparator >= 0) {
+            return branchLine.left(trackingSeparator).trimmed();
+        }
+
+        return branchLine;
+    }
+
+    return {};
 }
 
 QString GitStatusWidget::formatStatusOutput(const QString &statusOutput)

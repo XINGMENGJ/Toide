@@ -10,6 +10,7 @@ class TaskConfigTest final : public QObject {
 private slots:
     void loadFromFileParsesTasks();
     void loadFromFileRejectsMissingCommand();
+    void defaultWorkspaceProvidesBuildAndRunTasks();
 };
 
 void TaskConfigTest::loadFromFileParsesTasks()
@@ -63,6 +64,28 @@ void TaskConfigTest::loadFromFileRejectsMissingCommand()
 
     QVERIFY(!config.has_value());
     QVERIFY(errorMessage.contains(QStringLiteral("command")));
+}
+
+void TaskConfigTest::defaultWorkspaceProvidesBuildAndRunTasks()
+{
+#ifdef TOIDE_SOURCE_DIR
+    const auto configPath = QStringLiteral(TOIDE_SOURCE_DIR) + QStringLiteral("/examples/default-workspace/.toide/tasks.json");
+
+    QString errorMessage;
+    const auto config = TaskConfig::loadFromFile(configPath, &errorMessage);
+
+    QVERIFY2(config.has_value(), qPrintable(errorMessage));
+
+    QStringList taskNames;
+    for (const auto &task : config->tasks) {
+        taskNames.append(task.name);
+    }
+
+    QVERIFY(taskNames.contains(QStringLiteral("Build Example")));
+    QVERIFY(taskNames.contains(QStringLiteral("Run Example")));
+#else
+    QFAIL("TOIDE_SOURCE_DIR must be defined by the build system.");
+#endif
 }
 
 QTEST_MAIN(TaskConfigTest)

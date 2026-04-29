@@ -9,14 +9,16 @@
 - 保存文件：修改文件后使用 `Ctrl+S` 或工具栏 Save。
 - 底部 Tasks 面板：读取 `.toide/tasks.json` 并显示可运行任务。
 - 任务输出：点击 Run 后可在输出区域看到命令输出。
+- 示例编译：选择 `Build Example` 可以用当前环境里的 `g++` 编译 `src/hello_toide.cpp`。
 
 ## 建议操作
 
 1. 双击打开 `src/hello_toide.cpp`。
 2. 修改文件中的输出文本。
 3. 按 `Ctrl+S` 保存。
-4. 在底部 Tasks 面板选择 `Show Workspace Info`。
-5. 点击 Run，查看输出区域。
+4. 在底部 Tasks 面板选择 `Build Example`。
+5. 点击 Run，等待输出区显示编译完成。
+6. 选择 `Run Example` 并点击 Run，查看程序输出。
 
 ## 后续会加入
 

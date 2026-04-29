@@ -49,6 +49,7 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
             return;
         }
 
+        refreshStatusLabel_->setText(QStringLiteral("Opening terminal"));
         emit openTerminalRequested(workspaceRoot_);
     });
 }

@@ -50,6 +50,7 @@
 - Tasks 面板的诊断摘要项支持点击，点击后会通过主窗口打开对应文件并跳转到行列位置。
 - Git 标签页起步版可在打开工作区时显示 `git status --short --branch`，非 Git 目录会显示提示。
 - Git 状态面板会把 `git status --short --branch` 整理成 Branch、Staged、Unstaged、Untracked 分组。
+- Git 状态面板会显示刷新结果：成功、非 Git 仓库、超时或未打开工作区。
 
 ## 最近一次问题
 
@@ -67,9 +68,9 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `ad32f57 feat: add git status panel`。
-- 本轮未提交改动：Git 状态面板 staged/unstaged/untracked 分组展示。
+- 已提交并推送 `5b82b7b feat: group git status output`。
+- 本轮未提交改动：Git 状态面板刷新结果提示。
 
 ## 下一步建议
 
-下一步可以继续完善 Git 面板的刷新状态提示和常用操作按钮。
+下一步可以继续为 Git 面板加入常用操作按钮，例如刷新、打开终端、复制状态。

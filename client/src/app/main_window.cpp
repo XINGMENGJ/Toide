@@ -18,6 +18,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QKeySequence>
+#include <QProcess>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTabWidget>
@@ -106,6 +107,7 @@ void MainWindow::createLayout()
 
     connect(fileExplorer_, &FileExplorerWidget::fileOpenRequested, editorArea_, &EditorAreaWidget::openFile);
     connect(taskRunner_, &TaskRunnerWidget::diagnosticOpenRequested, editorArea_, &EditorAreaWidget::openFileAt);
+    connect(gitStatus_, &GitStatusWidget::openTerminalRequested, this, &MainWindow::openWorkspaceTerminal);
 }
 
 void MainWindow::chooseProjectDirectory()
@@ -146,6 +148,29 @@ void MainWindow::openProjectDirectory(const QString &projectPath)
     taskRunner_->loadTasksFromWorkspace(projectPath);
     gitStatus_->loadStatusFromWorkspace(projectPath);
     statusBar()->showMessage(QStringLiteral("Opened project: %1").arg(projectPath));
+}
+
+void MainWindow::openWorkspaceTerminal(const QString &projectPath)
+{
+    if (projectPath.isEmpty()) {
+        statusBar()->showMessage(QStringLiteral("No workspace is open."), 3000);
+        return;
+    }
+
+#if defined(Q_OS_WIN)
+    const bool started = QProcess::startDetached(QStringLiteral("cmd.exe"), QStringList{QStringLiteral("/K")}, projectPath);
+#elif defined(Q_OS_MACOS)
+    const bool started = QProcess::startDetached(QStringLiteral("open"), QStringList{QStringLiteral("-a"), QStringLiteral("Terminal"), projectPath});
+#else
+    const bool started = QProcess::startDetached(QStringLiteral("x-terminal-emulator"), QStringList{}, projectPath);
+#endif
+
+    if (!started) {
+        QMessageBox::warning(this, QStringLiteral("Open Terminal Failed"), QStringLiteral("Could not open a terminal for this workspace."));
+        return;
+    }
+
+    statusBar()->showMessage(QStringLiteral("Opened terminal: %1").arg(projectPath), 3000);
 }
 
 void MainWindow::saveCurrentFile()

@@ -7,6 +7,7 @@
 #include "workspace/workspace_manager.h"
 
 #include <QAction>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFileDialog>
 #include <QLabel>
@@ -36,6 +37,7 @@ MainWindow::MainWindow(QWidget *parent)
     statusBar()->showMessage(QStringLiteral("Ready"));
 
     connect(workspaceManager_, &WorkspaceManager::projectOpened, this, &MainWindow::openProjectDirectory);
+    openDefaultWorkspace();
 }
 
 MainWindow::~MainWindow() = default;
@@ -112,6 +114,24 @@ void MainWindow::chooseProjectDirectory()
 
     if (!selectedDirectory.isEmpty()) {
         workspaceManager_->openProject(selectedDirectory);
+    }
+}
+
+void MainWindow::openDefaultWorkspace()
+{
+    QStringList searchRoots{
+        QDir::currentPath(),
+        QCoreApplication::applicationDirPath(),
+    };
+
+#ifdef TOIDE_SOURCE_DIR
+    searchRoots.append(QStringLiteral(TOIDE_SOURCE_DIR));
+#endif
+
+    const auto defaultWorkspace = WorkspaceManager::findDefaultExampleWorkspace(searchRoots);
+
+    if (!defaultWorkspace.isEmpty()) {
+        workspaceManager_->openProject(defaultWorkspace);
     }
 }
 

@@ -1,0 +1,14 @@
+{
+  "tasks": [
+    {
+      "name": "Show Workspace Info",
+      "command": "echo Toide example workspace is ready.",
+      "workingDirectory": "${workspaceRoot}"
+    },
+    {
+      "name": "List Files",
+      "command": "dir",
+      "workingDirectory": "${workspaceRoot}"
+    }
+  ]
+}

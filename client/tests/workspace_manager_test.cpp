@@ -11,6 +11,8 @@ class WorkspaceManagerTest final : public QObject {
 private slots:
     void openProjectAcceptsExistingDirectory();
     void openProjectRejectsMissingDirectory();
+    void findDefaultExampleWorkspaceSearchesUpFromRoot();
+    void findDefaultExampleWorkspaceFindsConfiguredSourceTree();
 };
 
 void WorkspaceManagerTest::openProjectAcceptsExistingDirectory()
@@ -39,6 +41,33 @@ void WorkspaceManagerTest::openProjectRejectsMissingDirectory()
     QVERIFY(manager.currentProjectPath().isEmpty());
     QVERIFY(manager.currentProjectName().isEmpty());
     QCOMPARE(openedSpy.count(), 0);
+}
+
+void WorkspaceManagerTest::findDefaultExampleWorkspaceSearchesUpFromRoot()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+
+    QDir root(directory.path());
+    QVERIFY(root.mkpath(QStringLiteral("examples/default-workspace")));
+    QVERIFY(root.mkpath(QStringLiteral("build/client")));
+
+    const auto searchRoot = root.absoluteFilePath(QStringLiteral("build/client"));
+    const auto expected = QDir::cleanPath(root.absoluteFilePath(QStringLiteral("examples/default-workspace")));
+
+    QCOMPARE(WorkspaceManager::findDefaultExampleWorkspace(QStringList{searchRoot}), expected);
+}
+
+void WorkspaceManagerTest::findDefaultExampleWorkspaceFindsConfiguredSourceTree()
+{
+#ifdef TOIDE_SOURCE_DIR
+    const auto workspace = WorkspaceManager::findDefaultExampleWorkspace(QStringList{QStringLiteral(TOIDE_SOURCE_DIR)});
+
+    QVERIFY(!workspace.isEmpty());
+    QVERIFY(workspace.endsWith(QStringLiteral("examples/default-workspace")));
+#else
+    QFAIL("TOIDE_SOURCE_DIR must be defined by the build system.");
+#endif
 }
 
 QTEST_MAIN(WorkspaceManagerTest)

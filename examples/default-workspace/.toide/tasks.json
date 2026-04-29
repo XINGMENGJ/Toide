@@ -6,6 +6,16 @@
       "workingDirectory": "${workspaceRoot}"
     },
     {
+      "name": "Build Example",
+      "command": "if not exist build mkdir build && g++ -std=c++20 -Wall -Wextra src\\hello_toide.cpp -o build\\hello_toide.exe",
+      "workingDirectory": "${workspaceRoot}"
+    },
+    {
+      "name": "Run Example",
+      "command": "build\\hello_toide.exe",
+      "workingDirectory": "${workspaceRoot}"
+    },
+    {
       "name": "List Files",
       "command": "dir",
       "workingDirectory": "${workspaceRoot}"

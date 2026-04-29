@@ -38,6 +38,7 @@
 - 为兼容 Qt Creator shadow build，CMake 和 `Toide.pro` 都定义了 `TOIDE_SOURCE_DIR`，启动时会从源码根目录查找默认示例工作区。
 - Tasks 面板支持运行状态展示：空闲显示 `Idle`，运行中显示当前任务名。
 - Tasks 面板支持 Stop 按钮，可中止正在运行的 `QProcess` 任务。
+- 默认示例工作区提供 `Build Example` 和 `Run Example` 任务，可演示基础 C++ 编译/运行流程。
 
 ## 最近一次问题
 
@@ -55,9 +56,9 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `c1bbd65 feat: open default workspace with runnable tasks`。
-- 本轮未提交改动：Tasks 面板运行状态展示和 Stop 按钮。
+- 已提交并推送 `cc41ca8 feat: show task run state and stop tasks`。
+- 本轮未提交改动：默认示例工作区新增 `Build Example` / `Run Example` 编译运行任务。
 
 ## 下一步建议
 
-下一步建议完善任务失败/退出码的 UI 表达，或开始 Git 状态面板。
+下一步可以把 Build/Run 从通用 Tasks 下拉框升级为更明确的工具栏入口，并补充编译错误解析。

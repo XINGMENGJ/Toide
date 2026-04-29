@@ -41,6 +41,7 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
     });
     connect(copyButton_, &QPushButton::clicked, this, [this]() {
         QGuiApplication::clipboard()->setText(statusView_->toPlainText());
+        refreshStatusLabel_->setText(QStringLiteral("Copied status"));
     });
     connect(openTerminalButton_, &QPushButton::clicked, this, [this]() {
         if (workspaceRoot_.isEmpty()) {

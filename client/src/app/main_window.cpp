@@ -2,11 +2,14 @@
 
 #include "editor/editor_area_widget.h"
 #include "file_explorer/file_explorer_widget.h"
+#include "workspace/recent_project_store.h"
 #include "workspace/workspace_manager.h"
 
 #include <QAction>
+#include <QDir>
 #include <QFileDialog>
 #include <QLabel>
+#include <QStandardPaths>
 #include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
@@ -19,6 +22,8 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
+    , recentProjectStore_(std::make_unique<RecentProjectStore>(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+                                                               + QStringLiteral("/recent-projects.ini")))
     , workspaceManager_(new WorkspaceManager(this))
 {
     setWindowTitle(QStringLiteral("Toide"));
@@ -31,6 +36,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(workspaceManager_, &WorkspaceManager::projectOpened, this, &MainWindow::openProjectDirectory);
 }
+
+MainWindow::~MainWindow() = default;
 
 void MainWindow::createActions()
 {
@@ -108,6 +115,8 @@ void MainWindow::chooseProjectDirectory()
 
 void MainWindow::openProjectDirectory(const QString &projectPath)
 {
+    QDir().mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+    recentProjectStore_->addProject(projectPath);
     fileExplorer_->setProjectRoot(projectPath);
     statusBar()->showMessage(QStringLiteral("Opened project: %1").arg(projectPath));
 }

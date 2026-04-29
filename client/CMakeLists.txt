@@ -13,6 +13,7 @@ add_library(toide_client_core STATIC
     src/editor/editor_area_widget.cpp
     src/editor/editor_tab.cpp
     src/file_explorer/file_explorer_widget.cpp
+    src/workspace/recent_project_store.cpp
     src/workspace/workspace_manager.cpp
 )
 
@@ -73,4 +74,8 @@ add_toide_qt_test(toide_editor_tab_test
 
 add_toide_qt_test(toide_editor_area_widget_test
     tests/editor_area_widget_test.cpp
+)
+
+add_toide_qt_test(toide_recent_project_store_test
+    tests/recent_project_store_test.cpp
 )

@@ -14,6 +14,7 @@ SOURCES += \
     client/src/editor/editor_area_widget.cpp \
     client/src/editor/editor_tab.cpp \
     client/src/file_explorer/file_explorer_widget.cpp \
+    client/src/workspace/recent_project_store.cpp \
     client/src/workspace/workspace_manager.cpp
 
 HEADERS += \
@@ -21,6 +22,7 @@ HEADERS += \
     client/src/editor/editor_area_widget.h \
     client/src/editor/editor_tab.h \
     client/src/file_explorer/file_explorer_widget.h \
+    client/src/workspace/recent_project_store.h \
     client/src/workspace/workspace_manager.h
 
 DESTDIR = bin

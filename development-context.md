@@ -63,6 +63,9 @@
 - Git 状态面板点击 `Copy status` 后会显示 `Copied status` 反馈。
 - Git 状态面板复制反馈已提交并推送：`bbb5305 feat: show git status copy feedback`。
 - Git 状态面板点击 `Open terminal` 后会显示 `Opening terminal` 反馈。
+- Git 状态面板打开终端反馈已提交并推送：`f0b3969 feat: show git terminal opening feedback`。
+- Git 状态面板无状态内容时点击 `Copy status` 会显示 `No status to copy`，并不会覆盖现有剪贴板内容。
+- Git 状态解析里的 `QString::split(..., SkipEmptyParts)` 已按 Qt 主版本兼容，避免旧 Kit 下 `Qt::SkipEmptyParts` 不存在导致编译失败。
 
 ## 最近一次问题
 
@@ -77,11 +80,12 @@ Qt Creator 页面编译失败，错误集中在：
 - `TaskConfig::loadFromFile` 改为返回项目内的 `TaskConfigLoadResult`。
 - 移除生产代码里的 C++20 designated initializer。
 - `QProcess::startCommand()` 改为 Windows 使用 `cmd.exe /C`，非 Windows 使用 `/bin/sh -c`。
+- `Qt::SkipEmptyParts` 在部分 Qt Kit 下不可用，改为 Qt 5 使用 `QString::SkipEmptyParts`、Qt 6 使用 `Qt::SkipEmptyParts`。
 
 ## 当前未提交改动
 
-- 已提交并推送 `bbb5305 feat: show git status copy feedback`。
-- 本轮未提交改动：Git 状态面板打开终端时显示反馈。
+- 已提交并推送 `f0b3969 feat: show git terminal opening feedback`。
+- 本轮未提交改动：Git 状态面板无状态内容时复制给出明确提示；修复 `SkipEmptyParts` 兼容性编译错误。
 
 ## 下一步建议
 

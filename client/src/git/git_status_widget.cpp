@@ -8,6 +8,7 @@
 #include <QPushButton>
 #include <QTextEdit>
 #include <QVBoxLayout>
+#include <QtGlobal>
 
 GitStatusWidget::GitStatusWidget(QWidget *parent)
     : QWidget(parent)
@@ -40,7 +41,13 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
         loadStatusFromWorkspace(workspaceRoot_);
     });
     connect(copyButton_, &QPushButton::clicked, this, [this]() {
-        QGuiApplication::clipboard()->setText(statusView_->toPlainText());
+        const auto statusText = statusView_->toPlainText();
+        if (statusText.isEmpty()) {
+            refreshStatusLabel_->setText(QStringLiteral("No status to copy"));
+            return;
+        }
+
+        QGuiApplication::clipboard()->setText(statusText);
         refreshStatusLabel_->setText(QStringLiteral("Copied status"));
     });
     connect(openTerminalButton_, &QPushButton::clicked, this, [this]() {
@@ -88,7 +95,11 @@ bool GitStatusWidget::loadStatusFromWorkspace(const QString &workspaceRoot)
 
 QString GitStatusWidget::formatStatusOutput(const QString &statusOutput)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const auto lines = statusOutput.split(QLatin1Char('\n'), QString::SkipEmptyParts);
+#else
     const auto lines = statusOutput.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+#endif
     QString branchLine;
     QStringList staged;
     QStringList unstaged;

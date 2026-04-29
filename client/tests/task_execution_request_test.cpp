@@ -12,11 +12,10 @@ private slots:
 
 void TaskExecutionRequestTest::fromTaskReplacesWorkspaceRootInWorkingDirectory()
 {
-    const TaskDefinition task{
-        .name = QStringLiteral("Build"),
-        .command = QStringLiteral("cmake --build build"),
-        .workingDirectory = QStringLiteral("${workspaceRoot}/build"),
-    };
+    TaskDefinition task;
+    task.name = QStringLiteral("Build");
+    task.command = QStringLiteral("cmake --build build");
+    task.workingDirectory = QStringLiteral("${workspaceRoot}/build");
 
     const auto request = TaskExecutionRequest::fromTask(task, QStringLiteral("E:/Qtcode/Toide"));
 
@@ -27,11 +26,9 @@ void TaskExecutionRequestTest::fromTaskReplacesWorkspaceRootInWorkingDirectory()
 
 void TaskExecutionRequestTest::fromTaskUsesWorkspaceRootWhenWorkingDirectoryIsEmpty()
 {
-    const TaskDefinition task{
-        .name = QStringLiteral("Test"),
-        .command = QStringLiteral("ctest --output-on-failure"),
-        .workingDirectory = {},
-    };
+    TaskDefinition task;
+    task.name = QStringLiteral("Test");
+    task.command = QStringLiteral("ctest --output-on-failure");
 
     const auto request = TaskExecutionRequest::fromTask(task, QStringLiteral("E:/Qtcode/Toide"));
 

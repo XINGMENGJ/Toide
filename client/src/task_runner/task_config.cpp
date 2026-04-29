@@ -5,6 +5,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
+#include <utility>
+
 namespace {
 
 void setError(QString *errorMessage, const QString &message)
@@ -16,26 +18,52 @@ void setError(QString *errorMessage, const QString &message)
 
 } // namespace
 
-std::optional<TaskConfig> TaskConfig::loadFromFile(const QString &filePath, QString *errorMessage)
+TaskConfigLoadResult::TaskConfigLoadResult(TaskConfig config)
+    : hasValue_(true)
+    , config_(std::move(config))
+{
+}
+
+bool TaskConfigLoadResult::has_value() const
+{
+    return hasValue_;
+}
+
+const TaskConfig &TaskConfigLoadResult::value() const
+{
+    return config_;
+}
+
+const TaskConfig *TaskConfigLoadResult::operator->() const
+{
+    return &config_;
+}
+
+const TaskConfig &TaskConfigLoadResult::operator*() const
+{
+    return config_;
+}
+
+TaskConfigLoadResult TaskConfig::loadFromFile(const QString &filePath, QString *errorMessage)
 {
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         setError(errorMessage, QStringLiteral("Unable to open task config file."));
-        return std::nullopt;
+        return {};
     }
 
     QJsonParseError parseError;
     const auto document = QJsonDocument::fromJson(file.readAll(), &parseError);
     if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
         setError(errorMessage, QStringLiteral("Invalid tasks.json: %1").arg(parseError.errorString()));
-        return std::nullopt;
+        return {};
     }
 
     const auto root = document.object();
     const auto tasksValue = root.value(QStringLiteral("tasks"));
     if (!tasksValue.isArray()) {
         setError(errorMessage, QStringLiteral("tasks.json must contain a tasks array."));
-        return std::nullopt;
+        return {};
     }
 
     TaskConfig config;
@@ -44,7 +72,7 @@ std::optional<TaskConfig> TaskConfig::loadFromFile(const QString &filePath, QStr
         const auto taskValue = tasks.at(index);
         if (!taskValue.isObject()) {
             setError(errorMessage, QStringLiteral("Task %1 must be an object.").arg(index));
-            return std::nullopt;
+            return {};
         }
 
         const auto taskObject = taskValue.toObject();
@@ -54,20 +82,20 @@ std::optional<TaskConfig> TaskConfig::loadFromFile(const QString &filePath, QStr
 
         if (name.isEmpty()) {
             setError(errorMessage, QStringLiteral("Task %1 is missing name.").arg(index));
-            return std::nullopt;
+            return {};
         }
 
         if (command.isEmpty()) {
             setError(errorMessage, QStringLiteral("Task '%1' is missing command.").arg(name));
-            return std::nullopt;
+            return {};
         }
 
-        config.tasks.push_back(TaskDefinition{
-            .name = name,
-            .command = command,
-            .workingDirectory = workingDirectory,
-        });
+        TaskDefinition task;
+        task.name = name;
+        task.command = command;
+        task.workingDirectory = workingDirectory;
+        config.tasks.push_back(task);
     }
 
-    return config;
+    return TaskConfigLoadResult(config);
 }

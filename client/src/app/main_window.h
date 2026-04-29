@@ -7,6 +7,7 @@
 class FileExplorerWidget;
 class EditorAreaWidget;
 class RecentProjectStore;
+class TaskRunnerWidget;
 class WorkspaceManager;
 
 class MainWindow final : public QMainWindow {
@@ -28,4 +29,5 @@ private:
     WorkspaceManager *workspaceManager_ = nullptr;
     FileExplorerWidget *fileExplorer_ = nullptr;
     EditorAreaWidget *editorArea_ = nullptr;
+    TaskRunnerWidget *taskRunner_ = nullptr;
 };

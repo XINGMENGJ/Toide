@@ -18,11 +18,14 @@ void TaskProcessRunnerTest::runCapturesStandardOutputAndExitCode()
     QTemporaryDir directory;
     QVERIFY(directory.isValid());
 
-    const TaskExecutionRequest request{
-        .name = QStringLiteral("Echo"),
-        .command = QStringLiteral("cmd /c echo ToideTask"),
-        .workingDirectory = directory.path(),
-    };
+    TaskExecutionRequest request;
+    request.name = QStringLiteral("Echo");
+#ifdef Q_OS_WIN
+    request.command = QStringLiteral("echo ToideTask");
+#else
+    request.command = QStringLiteral("echo ToideTask");
+#endif
+    request.workingDirectory = directory.path();
 
     TaskProcessRunner runner;
     QSignalSpy outputSpy(&runner, &TaskProcessRunner::outputReceived);

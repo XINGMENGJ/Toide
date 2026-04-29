@@ -17,6 +17,7 @@ SOURCES += \
     client/src/task_runner/task_config.cpp \
     client/src/task_runner/task_execution_request.cpp \
     client/src/task_runner/task_process_runner.cpp \
+    client/src/task_runner/task_runner_widget.cpp \
     client/src/workspace/recent_project_store.cpp \
     client/src/workspace/workspace_manager.cpp
 
@@ -28,6 +29,7 @@ HEADERS += \
     client/src/task_runner/task_config.h \
     client/src/task_runner/task_execution_request.h \
     client/src/task_runner/task_process_runner.h \
+    client/src/task_runner/task_runner_widget.h \
     client/src/workspace/recent_project_store.h \
     client/src/workspace/workspace_manager.h
 
@@ -37,5 +39,5 @@ MOC_DIR = build/qmake/moc
 RCC_DIR = build/qmake/rcc
 UI_DIR = build/qmake/ui
 
-win32-msvc:QMAKE_CXXFLAGS += /W4 /permissive-
-win32-g++:QMAKE_CXXFLAGS += -Wall -Wextra -Wpedantic
+win32-msvc:QMAKE_CXXFLAGS += /std:c++20 /W4 /permissive-
+win32-g++:QMAKE_CXXFLAGS += -std=gnu++20 -Wall -Wextra -Wpedantic

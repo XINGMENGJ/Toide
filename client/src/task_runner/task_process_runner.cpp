@@ -2,6 +2,8 @@
 
 #include "task_runner/task_execution_request.h"
 
+#include <QStringList>
+
 TaskProcessRunner::TaskProcessRunner(QObject *parent)
     : QObject(parent)
 {
@@ -32,7 +34,11 @@ bool TaskProcessRunner::start(const TaskExecutionRequest &request)
     }
 
     process_.setWorkingDirectory(request.workingDirectory);
-    process_.startCommand(request.command);
+#ifdef Q_OS_WIN
+    process_.start(QStringLiteral("cmd.exe"), QStringList{QStringLiteral("/C"), request.command});
+#else
+    process_.start(QStringLiteral("/bin/sh"), QStringList{QStringLiteral("-c"), request.command});
+#endif
     return process_.waitForStarted(1000);
 }
 

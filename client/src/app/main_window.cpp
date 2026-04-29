@@ -2,6 +2,7 @@
 
 #include "editor/editor_area_widget.h"
 #include "file_explorer/file_explorer_widget.h"
+#include "task_runner/task_runner_widget.h"
 #include "workspace/recent_project_store.h"
 #include "workspace/workspace_manager.h"
 
@@ -86,7 +87,8 @@ void MainWindow::createLayout()
 
     auto *outputTabs = new QTabWidget(this);
     outputTabs->setObjectName(QStringLiteral("outputTabs"));
-    outputTabs->addTab(new QLabel(QStringLiteral("Task output will appear here."), outputTabs), QStringLiteral("Tasks"));
+    taskRunner_ = new TaskRunnerWidget(outputTabs);
+    outputTabs->addTab(taskRunner_, QStringLiteral("Tasks"));
     outputTabs->addTab(new QLabel(QStringLiteral("Git status will appear here."), outputTabs), QStringLiteral("Git"));
 
     auto *rootSplitter = new QSplitter(Qt::Vertical, this);
@@ -118,6 +120,7 @@ void MainWindow::openProjectDirectory(const QString &projectPath)
     QDir().mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
     recentProjectStore_->addProject(projectPath);
     fileExplorer_->setProjectRoot(projectPath);
+    taskRunner_->loadTasksFromWorkspace(projectPath);
     statusBar()->showMessage(QStringLiteral("Opened project: %1").arg(projectPath));
 }
 

@@ -11,9 +11,9 @@ TaskExecutionRequest TaskExecutionRequest::fromTask(const TaskDefinition &task, 
 
     workingDirectory.replace(QStringLiteral("${workspaceRoot}"), workspaceRoot);
 
-    return TaskExecutionRequest{
-        .name = task.name,
-        .command = task.command,
-        .workingDirectory = QDir::cleanPath(workingDirectory),
-    };
+    TaskExecutionRequest request;
+    request.name = task.name;
+    request.command = task.command;
+    request.workingDirectory = QDir::cleanPath(workingDirectory);
+    return request;
 }

@@ -16,6 +16,7 @@ add_library(toide_client_core STATIC
     src/task_runner/task_config.cpp
     src/task_runner/task_execution_request.cpp
     src/task_runner/task_process_runner.cpp
+    src/task_runner/task_runner_widget.cpp
     src/workspace/recent_project_store.cpp
     src/workspace/workspace_manager.cpp
 )
@@ -93,4 +94,8 @@ add_toide_qt_test(toide_task_execution_request_test
 
 add_toide_qt_test(toide_task_process_runner_test
     tests/task_process_runner_test.cpp
+)
+
+add_toide_qt_test(toide_task_runner_widget_test
+    tests/task_runner_widget_test.cpp
 )

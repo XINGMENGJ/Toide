@@ -21,6 +21,7 @@ private slots:
     void loadStatusShowsRefreshResult();
     void copyStatusCopiesCurrentStatusToClipboard();
     void copyStatusShowsCopiedFeedback();
+    void copyStatusWithoutStatusShowsHelpfulFeedback();
     void openTerminalRequestsCurrentWorkspace();
     void openTerminalShowsOpeningFeedback();
     void loadStatusFromNonGitWorkspaceShowsHelpfulMessage();
@@ -211,6 +212,21 @@ void GitStatusWidgetTest::copyStatusShowsCopiedFeedback()
     copyButton->click();
 
     QVERIFY(statusLabel->text().contains(QStringLiteral("Copied status")));
+}
+
+void GitStatusWidgetTest::copyStatusWithoutStatusShowsHelpfulFeedback()
+{
+    GitStatusWidget widget;
+    auto *statusLabel = widget.findChild<QLabel *>(QStringLiteral("gitRefreshStatusLabel"));
+    QVERIFY(statusLabel != nullptr);
+    auto *copyButton = widget.findChild<QPushButton *>(QStringLiteral("copyGitStatusButton"));
+    QVERIFY(copyButton != nullptr);
+
+    QGuiApplication::clipboard()->setText(QStringLiteral("keep me"));
+    copyButton->click();
+
+    QVERIFY(statusLabel->text().contains(QStringLiteral("No status to copy")));
+    QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("keep me"));
 }
 
 void GitStatusWidgetTest::openTerminalRequestsCurrentWorkspace()

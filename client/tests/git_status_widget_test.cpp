@@ -22,6 +22,7 @@ private slots:
     void copyStatusCopiesCurrentStatusToClipboard();
     void copyStatusShowsCopiedFeedback();
     void openTerminalRequestsCurrentWorkspace();
+    void openTerminalShowsOpeningFeedback();
     void loadStatusFromNonGitWorkspaceShowsHelpfulMessage();
 };
 
@@ -231,6 +232,25 @@ void GitStatusWidgetTest::openTerminalRequestsCurrentWorkspace()
 
     QCOMPARE(terminalSpy.count(), 1);
     QCOMPARE(terminalSpy.takeFirst().at(0).toString(), workspace.path());
+}
+
+void GitStatusWidgetTest::openTerminalShowsOpeningFeedback()
+{
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("init")}));
+
+    GitStatusWidget widget;
+    QVERIFY(widget.loadStatusFromWorkspace(workspace.path()));
+
+    auto *statusLabel = widget.findChild<QLabel *>(QStringLiteral("gitRefreshStatusLabel"));
+    QVERIFY(statusLabel != nullptr);
+    auto *openTerminalButton = widget.findChild<QPushButton *>(QStringLiteral("openGitTerminalButton"));
+    QVERIFY(openTerminalButton != nullptr);
+
+    openTerminalButton->click();
+
+    QVERIFY(statusLabel->text().contains(QStringLiteral("Opening terminal")));
 }
 
 void GitStatusWidgetTest::loadStatusFromNonGitWorkspaceShowsHelpfulMessage()

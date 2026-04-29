@@ -61,6 +61,8 @@
 - Git 状态面板在存在改动时会显示 staged、unstaged、untracked 数量摘要。
 - Git 状态面板数量摘要已提交并推送：`b4b3610 feat: summarize git status counts`。
 - Git 状态面板点击 `Copy status` 后会显示 `Copied status` 反馈。
+- Git 状态面板复制反馈已提交并推送：`bbb5305 feat: show git status copy feedback`。
+- Git 状态面板点击 `Open terminal` 后会显示 `Opening terminal` 反馈。
 
 ## 最近一次问题
 
@@ -78,8 +80,8 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `b4b3610 feat: summarize git status counts`。
-- 本轮未提交改动：Git 状态面板复制状态后显示反馈。
+- 已提交并推送 `bbb5305 feat: show git status copy feedback`。
+- 本轮未提交改动：Git 状态面板打开终端时显示反馈。
 
 ## 下一步建议
 

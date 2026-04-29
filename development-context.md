@@ -57,6 +57,8 @@
 - Git 状态面板提供 `Open terminal` 按钮，会请求主窗口在当前工作区打开系统终端。
 - Git 状态面板打开终端功能已提交并推送：`abcca3d feat: open terminal from git panel`。
 - Git 状态面板在工作区无 staged、unstaged、untracked 改动时会显示 `Working tree clean.`。
+- Git 状态面板 clean 状态提示已提交并推送：`5cccdd1 feat: show clean git status`。
+- Git 状态面板在存在改动时会显示 staged、unstaged、untracked 数量摘要。
 
 ## 最近一次问题
 
@@ -74,8 +76,8 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `abcca3d feat: open terminal from git panel`。
-- 本轮未提交改动：Git 状态面板在工作区干净时显示明确提示。
+- 已提交并推送 `5cccdd1 feat: show clean git status`。
+- 本轮未提交改动：Git 状态面板显示 staged、unstaged、untracked 数量摘要。
 
 ## 下一步建议
 

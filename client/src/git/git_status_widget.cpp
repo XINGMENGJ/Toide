@@ -128,6 +128,12 @@ QString GitStatusWidget::formatStatusOutput(const QString &statusOutput)
     if (staged.isEmpty() && unstaged.isEmpty() && untracked.isEmpty()) {
         formatted.append(QStringLiteral("Working tree clean."));
         formatted.append(QString());
+    } else {
+        formatted.append(QStringLiteral("Summary"));
+        formatted.append(QStringLiteral("Staged: %1").arg(staged.size()));
+        formatted.append(QStringLiteral("Unstaged: %1").arg(unstaged.size()));
+        formatted.append(QStringLiteral("Untracked: %1").arg(untracked.size()));
+        formatted.append(QString());
     }
 
     formatted.append(QStringLiteral("Staged"));

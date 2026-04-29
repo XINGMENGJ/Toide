@@ -16,6 +16,7 @@ SOURCES += \
     client/src/file_explorer/file_explorer_widget.cpp \
     client/src/task_runner/task_config.cpp \
     client/src/task_runner/task_execution_request.cpp \
+    client/src/task_runner/task_process_runner.cpp \
     client/src/workspace/recent_project_store.cpp \
     client/src/workspace/workspace_manager.cpp
 
@@ -26,6 +27,7 @@ HEADERS += \
     client/src/file_explorer/file_explorer_widget.h \
     client/src/task_runner/task_config.h \
     client/src/task_runner/task_execution_request.h \
+    client/src/task_runner/task_process_runner.h \
     client/src/workspace/recent_project_store.h \
     client/src/workspace/workspace_manager.h
 

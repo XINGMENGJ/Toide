@@ -14,6 +14,8 @@ public:
     bool loadStatusFromWorkspace(const QString &workspaceRoot);
 
 private:
+    static QString formatStatusOutput(const QString &statusOutput);
+
     QString workspaceRoot_;
     QPushButton *refreshButton_ = nullptr;
     QTextEdit *statusView_ = nullptr;

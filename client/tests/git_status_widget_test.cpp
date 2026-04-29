@@ -11,6 +11,7 @@ class GitStatusWidgetTest final : public QObject {
 
 private slots:
     void loadStatusFromGitWorkspaceShowsBranchAndChanges();
+    void loadStatusFromGitWorkspaceGroupsChanges();
     void loadStatusFromNonGitWorkspaceShowsHelpfulMessage();
 };
 
@@ -38,8 +39,45 @@ void GitStatusWidgetTest::loadStatusFromGitWorkspaceShowsBranchAndChanges()
 
     auto *statusView = widget.findChild<QTextEdit *>(QStringLiteral("gitStatusView"));
     QVERIFY(statusView != nullptr);
-    QVERIFY(statusView->toPlainText().contains(QStringLiteral("##")));
+    QVERIFY(statusView->toPlainText().contains(QStringLiteral("Branch")));
     QVERIFY(statusView->toPlainText().contains(QStringLiteral("notes.txt")));
+}
+
+void GitStatusWidgetTest::loadStatusFromGitWorkspaceGroupsChanges()
+{
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("init")}));
+
+    QFile stagedFile(workspace.filePath(QStringLiteral("staged.txt")));
+    QVERIFY(stagedFile.open(QIODevice::WriteOnly | QIODevice::Text));
+    stagedFile.write("staged\n");
+    stagedFile.close();
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("add"), QStringLiteral("staged.txt")}));
+
+    QFile unstagedFile(workspace.filePath(QStringLiteral("staged.txt")));
+    QVERIFY(unstagedFile.open(QIODevice::Append | QIODevice::Text));
+    unstagedFile.write("unstaged\n");
+    unstagedFile.close();
+
+    QFile untrackedFile(workspace.filePath(QStringLiteral("untracked.txt")));
+    QVERIFY(untrackedFile.open(QIODevice::WriteOnly | QIODevice::Text));
+    untrackedFile.write("untracked\n");
+    untrackedFile.close();
+
+    GitStatusWidget widget;
+    QVERIFY(widget.loadStatusFromWorkspace(workspace.path()));
+
+    auto *statusView = widget.findChild<QTextEdit *>(QStringLiteral("gitStatusView"));
+    QVERIFY(statusView != nullptr);
+
+    const auto text = statusView->toPlainText();
+    QVERIFY(text.contains(QStringLiteral("Branch")));
+    QVERIFY(text.contains(QStringLiteral("Staged")));
+    QVERIFY(text.contains(QStringLiteral("Unstaged")));
+    QVERIFY(text.contains(QStringLiteral("Untracked")));
+    QVERIFY(text.contains(QStringLiteral("staged.txt")));
+    QVERIFY(text.contains(QStringLiteral("untracked.txt")));
 }
 
 void GitStatusWidgetTest::loadStatusFromNonGitWorkspaceShowsHelpfulMessage()

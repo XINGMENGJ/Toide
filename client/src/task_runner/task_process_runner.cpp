@@ -48,5 +48,5 @@ void TaskProcessRunner::stop()
         return;
     }
 
-    process_.terminate();
+    process_.kill();
 }

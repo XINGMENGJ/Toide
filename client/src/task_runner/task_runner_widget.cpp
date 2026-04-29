@@ -14,17 +14,24 @@ TaskRunnerWidget::TaskRunnerWidget(QWidget *parent)
     : QWidget(parent)
     , taskSelector_(new QComboBox(this))
     , runButton_(new QPushButton(QStringLiteral("Run"), this))
+    , stopButton_(new QPushButton(QStringLiteral("Stop"), this))
+    , statusLabel_(new QLabel(QStringLiteral("Idle"), this))
     , outputView_(new QTextEdit(this))
 {
     taskSelector_->setObjectName(QStringLiteral("taskSelector"));
     runButton_->setObjectName(QStringLiteral("runTaskButton"));
+    stopButton_->setObjectName(QStringLiteral("stopTaskButton"));
+    statusLabel_->setObjectName(QStringLiteral("taskStatusLabel"));
     outputView_->setObjectName(QStringLiteral("taskOutputView"));
+    stopButton_->setEnabled(false);
     outputView_->setReadOnly(true);
 
     auto *toolbarLayout = new QHBoxLayout;
     toolbarLayout->addWidget(new QLabel(QStringLiteral("Task:"), this));
     toolbarLayout->addWidget(taskSelector_, 1);
+    toolbarLayout->addWidget(statusLabel_);
     toolbarLayout->addWidget(runButton_);
+    toolbarLayout->addWidget(stopButton_);
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(4, 4, 4, 4);
@@ -32,11 +39,12 @@ TaskRunnerWidget::TaskRunnerWidget(QWidget *parent)
     layout->addWidget(outputView_, 1);
 
     connect(runButton_, &QPushButton::clicked, this, &TaskRunnerWidget::runSelectedTask);
+    connect(stopButton_, &QPushButton::clicked, this, &TaskRunnerWidget::stopRunningTask);
     connect(&processRunner_, &TaskProcessRunner::outputReceived, this, &TaskRunnerWidget::appendOutput);
     connect(&processRunner_, &TaskProcessRunner::errorReceived, this, &TaskRunnerWidget::appendOutput);
     connect(&processRunner_, &TaskProcessRunner::finished, this, [this](int exitCode) {
         appendOutput(QStringLiteral("\nProcess finished with exit code %1\n").arg(exitCode));
-        runButton_->setEnabled(true);
+        setTaskRunning(false);
     });
 }
 
@@ -70,12 +78,20 @@ void TaskRunnerWidget::runSelectedTask()
     }
 
     outputView_->clear();
-    const auto request = TaskExecutionRequest::fromTask(taskConfig_.tasks.at(taskIndex), workspaceRoot_);
-    runButton_->setEnabled(false);
+    const auto &task = taskConfig_.tasks.at(taskIndex);
+    const auto request = TaskExecutionRequest::fromTask(task, workspaceRoot_);
     if (!processRunner_.start(request)) {
-        runButton_->setEnabled(true);
+        setTaskRunning(false);
         outputView_->setPlainText(QStringLiteral("Failed to start task."));
+        return;
     }
+
+    setTaskRunning(true, task.name);
+}
+
+void TaskRunnerWidget::stopRunningTask()
+{
+    processRunner_.stop();
 }
 
 void TaskRunnerWidget::appendOutput(const QString &output)
@@ -83,4 +99,11 @@ void TaskRunnerWidget::appendOutput(const QString &output)
     outputView_->moveCursor(QTextCursor::End);
     outputView_->insertPlainText(output);
     outputView_->moveCursor(QTextCursor::End);
+}
+
+void TaskRunnerWidget::setTaskRunning(bool isRunning, const QString &taskName)
+{
+    runButton_->setEnabled(!isRunning);
+    stopButton_->setEnabled(isRunning);
+    statusLabel_->setText(isRunning ? QStringLiteral("Running: %1").arg(taskName) : QStringLiteral("Idle"));
 }

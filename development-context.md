@@ -36,6 +36,8 @@
 - Qt Creator 兼容性修复已提交：移除 `std::optional` 依赖、移除生产代码 designated initializer、替换 `QProcess::startCommand()`。
 - 默认示例工作区位于 `examples/default-workspace`，启动时会自动打开，用来展示文件树、编辑器、保存和任务面板。
 - 为兼容 Qt Creator shadow build，CMake 和 `Toide.pro` 都定义了 `TOIDE_SOURCE_DIR`，启动时会从源码根目录查找默认示例工作区。
+- Tasks 面板支持运行状态展示：空闲显示 `Idle`，运行中显示当前任务名。
+- Tasks 面板支持 Stop 按钮，可中止正在运行的 `QProcess` 任务。
 
 ## 最近一次问题
 
@@ -53,8 +55,9 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 暂无。当前 `main` 已推送到 GitHub。
+- 已提交并推送 `c1bbd65 feat: open default workspace with runnable tasks`。
+- 本轮未提交改动：Tasks 面板运行状态展示和 Stop 按钮。
 
 ## 下一步建议
 
-下一步优先完善任务运行面板的停止按钮和运行状态展示，然后提交并推送。
+下一步建议完善任务失败/退出码的 UI 表达，或开始 Git 状态面板。

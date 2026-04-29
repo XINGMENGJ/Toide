@@ -40,6 +40,7 @@
 - Tasks 面板支持 Stop 按钮，可中止正在运行的 `QProcess` 任务。
 - 默认示例工作区提供 `Build Example` 和 `Run Example` 任务，可演示基础 C++ 编译/运行流程。
 - Tasks 面板在任务自然结束后显示 `Succeeded` 或 `Failed: exit code N`，让编译结果更清晰。
+- 编译诊断解析器可识别 g++ 和 MSVC 风格的 `error` / `warning` / `note` 输出，提取文件、行列号、级别和消息。
 
 ## 最近一次问题
 
@@ -57,9 +58,9 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `e19a70d feat: add build tasks to example workspace`。
-- 本轮未提交改动：Tasks 面板任务结果状态显示。
+- 已提交并推送 `ee55e15 feat: show task result status`。
+- 本轮未提交改动：编译诊断解析器、对应测试，以及 CMake/qmake 构建清单更新。
 
 ## 下一步建议
 
-下一步可以继续做编译错误解析，或把 Build/Run 从通用 Tasks 下拉框升级为专用入口。
+下一步可以把诊断解析结果接入 Tasks 输出面板，显示结构化错误列表并支持打开对应文件。

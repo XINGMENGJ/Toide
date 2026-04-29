@@ -19,6 +19,7 @@ private:
 
     QString workspaceRoot_;
     QPushButton *refreshButton_ = nullptr;
+    QPushButton *copyButton_ = nullptr;
     QLabel *refreshStatusLabel_ = nullptr;
     QTextEdit *statusView_ = nullptr;
 };

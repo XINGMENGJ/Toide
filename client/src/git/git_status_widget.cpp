@@ -1,5 +1,7 @@
 #include "git/git_status_widget.h"
 
+#include <QClipboard>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QProcess>
@@ -10,10 +12,12 @@
 GitStatusWidget::GitStatusWidget(QWidget *parent)
     : QWidget(parent)
     , refreshButton_(new QPushButton(QStringLiteral("Refresh"), this))
+    , copyButton_(new QPushButton(QStringLiteral("Copy status"), this))
     , refreshStatusLabel_(new QLabel(QStringLiteral("Not refreshed"), this))
     , statusView_(new QTextEdit(this))
 {
     refreshButton_->setObjectName(QStringLiteral("refreshGitStatusButton"));
+    copyButton_->setObjectName(QStringLiteral("copyGitStatusButton"));
     refreshStatusLabel_->setObjectName(QStringLiteral("gitRefreshStatusLabel"));
     statusView_->setObjectName(QStringLiteral("gitStatusView"));
     statusView_->setReadOnly(true);
@@ -21,6 +25,7 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
     auto *toolbarLayout = new QHBoxLayout;
     toolbarLayout->addWidget(refreshStatusLabel_, 1);
     toolbarLayout->addStretch(1);
+    toolbarLayout->addWidget(copyButton_);
     toolbarLayout->addWidget(refreshButton_);
 
     auto *layout = new QVBoxLayout(this);
@@ -30,6 +35,9 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
 
     connect(refreshButton_, &QPushButton::clicked, this, [this]() {
         loadStatusFromWorkspace(workspaceRoot_);
+    });
+    connect(copyButton_, &QPushButton::clicked, this, [this]() {
+        QGuiApplication::clipboard()->setText(statusView_->toPlainText());
     });
 }
 

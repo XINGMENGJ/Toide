@@ -13,11 +13,13 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
     : QWidget(parent)
     , refreshButton_(new QPushButton(QStringLiteral("Refresh"), this))
     , copyButton_(new QPushButton(QStringLiteral("Copy status"), this))
+    , openTerminalButton_(new QPushButton(QStringLiteral("Open terminal"), this))
     , refreshStatusLabel_(new QLabel(QStringLiteral("Not refreshed"), this))
     , statusView_(new QTextEdit(this))
 {
     refreshButton_->setObjectName(QStringLiteral("refreshGitStatusButton"));
     copyButton_->setObjectName(QStringLiteral("copyGitStatusButton"));
+    openTerminalButton_->setObjectName(QStringLiteral("openGitTerminalButton"));
     refreshStatusLabel_->setObjectName(QStringLiteral("gitRefreshStatusLabel"));
     statusView_->setObjectName(QStringLiteral("gitStatusView"));
     statusView_->setReadOnly(true);
@@ -25,6 +27,7 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
     auto *toolbarLayout = new QHBoxLayout;
     toolbarLayout->addWidget(refreshStatusLabel_, 1);
     toolbarLayout->addStretch(1);
+    toolbarLayout->addWidget(openTerminalButton_);
     toolbarLayout->addWidget(copyButton_);
     toolbarLayout->addWidget(refreshButton_);
 
@@ -38,6 +41,14 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
     });
     connect(copyButton_, &QPushButton::clicked, this, [this]() {
         QGuiApplication::clipboard()->setText(statusView_->toPlainText());
+    });
+    connect(openTerminalButton_, &QPushButton::clicked, this, [this]() {
+        if (workspaceRoot_.isEmpty()) {
+            refreshStatusLabel_->setText(QStringLiteral("No workspace is open."));
+            return;
+        }
+
+        emit openTerminalRequested(workspaceRoot_);
     });
 }
 

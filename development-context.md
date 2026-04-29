@@ -53,6 +53,8 @@
 - Git 状态面板会显示刷新结果：成功、非 Git 仓库、超时或未打开工作区。
 - Git 状态面板刷新结果提示已提交并推送：`9fcb740 feat: show git refresh status`。
 - Git 状态面板提供 `Copy status` 按钮，可复制当前整理后的状态文本到剪贴板。
+- Git 状态面板复制状态功能已提交并推送：`d7ec724 feat: copy git status output`。
+- Git 状态面板提供 `Open terminal` 按钮，会请求主窗口在当前工作区打开系统终端。
 
 ## 最近一次问题
 
@@ -70,8 +72,8 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `9fcb740 feat: show git refresh status`。
-- 本轮未提交改动：Git 状态面板复制当前状态到剪贴板。
+- 已提交并推送 `d7ec724 feat: copy git status output`。
+- 本轮未提交改动：Git 状态面板打开当前工作区终端。
 
 ## 下一步建议
 

@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QProcess>
 #include <QPushButton>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTextEdit>
 
@@ -17,6 +18,7 @@ private slots:
     void loadStatusFromGitWorkspaceGroupsChanges();
     void loadStatusShowsRefreshResult();
     void copyStatusCopiesCurrentStatusToClipboard();
+    void openTerminalRequestsCurrentWorkspace();
     void loadStatusFromNonGitWorkspaceShowsHelpfulMessage();
 };
 
@@ -128,6 +130,27 @@ void GitStatusWidgetTest::copyStatusCopiesCurrentStatusToClipboard()
 
     QCOMPARE(QGuiApplication::clipboard()->text(), statusView->toPlainText());
     QVERIFY(QGuiApplication::clipboard()->text().contains(QStringLiteral("notes.txt")));
+}
+
+void GitStatusWidgetTest::openTerminalRequestsCurrentWorkspace()
+{
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("init")}));
+
+    GitStatusWidget widget;
+    QVERIFY(widget.loadStatusFromWorkspace(workspace.path()));
+
+    QSignalSpy terminalSpy(&widget, SIGNAL(openTerminalRequested(QString)));
+    QVERIFY(terminalSpy.isValid());
+
+    auto *openTerminalButton = widget.findChild<QPushButton *>(QStringLiteral("openGitTerminalButton"));
+    QVERIFY(openTerminalButton != nullptr);
+
+    openTerminalButton->click();
+
+    QCOMPARE(terminalSpy.count(), 1);
+    QCOMPARE(terminalSpy.takeFirst().at(0).toString(), workspace.path());
 }
 
 void GitStatusWidgetTest::loadStatusFromNonGitWorkspaceShowsHelpfulMessage()

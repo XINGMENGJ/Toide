@@ -22,6 +22,7 @@ private:
     void chooseProjectDirectory();
     void openDefaultWorkspace();
     void openProjectDirectory(const QString &projectPath);
+    void openWorkspaceTerminal(const QString &projectPath);
     void saveCurrentFile();
 
     QAction *openProjectAction_ = nullptr;

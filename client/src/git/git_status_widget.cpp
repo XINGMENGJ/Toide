@@ -125,6 +125,11 @@ QString GitStatusWidget::formatStatusOutput(const QString &statusOutput)
     formatted.append(branchLine.isEmpty() ? QStringLiteral("(unknown)") : branchLine);
     formatted.append(QString());
 
+    if (staged.isEmpty() && unstaged.isEmpty() && untracked.isEmpty()) {
+        formatted.append(QStringLiteral("Working tree clean."));
+        formatted.append(QString());
+    }
+
     formatted.append(QStringLiteral("Staged"));
     formatted.append(staged.isEmpty() ? QStringLiteral("(none)") : staged.join(QLatin1Char('\n')));
     formatted.append(QString());

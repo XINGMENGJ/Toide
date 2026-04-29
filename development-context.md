@@ -55,6 +55,8 @@
 - Git 状态面板提供 `Copy status` 按钮，可复制当前整理后的状态文本到剪贴板。
 - Git 状态面板复制状态功能已提交并推送：`d7ec724 feat: copy git status output`。
 - Git 状态面板提供 `Open terminal` 按钮，会请求主窗口在当前工作区打开系统终端。
+- Git 状态面板打开终端功能已提交并推送：`abcca3d feat: open terminal from git panel`。
+- Git 状态面板在工作区无 staged、unstaged、untracked 改动时会显示 `Working tree clean.`。
 
 ## 最近一次问题
 
@@ -72,9 +74,9 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `d7ec724 feat: copy git status output`。
-- 本轮未提交改动：Git 状态面板打开当前工作区终端。
+- 已提交并推送 `abcca3d feat: open terminal from git panel`。
+- 本轮未提交改动：Git 状态面板在工作区干净时显示明确提示。
 
 ## 下一步建议
 
-下一步可以继续为 Git 面板加入打开终端等常用操作。
+下一步可以继续完善 Git 面板的状态摘要和常用操作。

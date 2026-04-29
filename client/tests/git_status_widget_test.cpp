@@ -15,6 +15,7 @@ class GitStatusWidgetTest final : public QObject {
 
 private slots:
     void loadStatusFromGitWorkspaceShowsBranchAndChanges();
+    void loadStatusFromCleanGitWorkspaceShowsCleanMessage();
     void loadStatusFromGitWorkspaceGroupsChanges();
     void loadStatusShowsRefreshResult();
     void copyStatusCopiesCurrentStatusToClipboard();
@@ -48,6 +49,29 @@ void GitStatusWidgetTest::loadStatusFromGitWorkspaceShowsBranchAndChanges()
     QVERIFY(statusView != nullptr);
     QVERIFY(statusView->toPlainText().contains(QStringLiteral("Branch")));
     QVERIFY(statusView->toPlainText().contains(QStringLiteral("notes.txt")));
+}
+
+void GitStatusWidgetTest::loadStatusFromCleanGitWorkspaceShowsCleanMessage()
+{
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("init")}));
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("config"), QStringLiteral("user.email"), QStringLiteral("toide@example.com")}));
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("config"), QStringLiteral("user.name"), QStringLiteral("Toide Test")}));
+
+    QFile file(workspace.filePath(QStringLiteral("tracked.txt")));
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+    file.write("tracked\n");
+    file.close();
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("add"), QStringLiteral("tracked.txt")}));
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("commit"), QStringLiteral("-m"), QStringLiteral("initial")}));
+
+    GitStatusWidget widget;
+    QVERIFY(widget.loadStatusFromWorkspace(workspace.path()));
+
+    auto *statusView = widget.findChild<QTextEdit *>(QStringLiteral("gitStatusView"));
+    QVERIFY(statusView != nullptr);
+    QVERIFY(statusView->toPlainText().contains(QStringLiteral("Working tree clean.")));
 }
 
 void GitStatusWidgetTest::loadStatusFromGitWorkspaceGroupsChanges()

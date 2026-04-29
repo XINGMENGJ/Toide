@@ -1,14 +1,15 @@
 #include "task_runner/task_runner_widget.h"
 
-#include "task_runner/task_diagnostic_parser.h"
 #include "task_runner/task_execution_request.h"
 
 #include <QComboBox>
+#include <QDir>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
-#include <QTextEdit>
+#include <QTextBrowser>
 #include <QTextCursor>
+#include <QUrl>
 #include <QVBoxLayout>
 
 TaskRunnerWidget::TaskRunnerWidget(QWidget *parent)
@@ -17,7 +18,7 @@ TaskRunnerWidget::TaskRunnerWidget(QWidget *parent)
     , runButton_(new QPushButton(QStringLiteral("Run"), this))
     , stopButton_(new QPushButton(QStringLiteral("Stop"), this))
     , statusLabel_(new QLabel(QStringLiteral("Idle"), this))
-    , outputView_(new QTextEdit(this))
+    , outputView_(new QTextBrowser(this))
 {
     taskSelector_->setObjectName(QStringLiteral("taskSelector"));
     runButton_->setObjectName(QStringLiteral("runTaskButton"));
@@ -26,6 +27,7 @@ TaskRunnerWidget::TaskRunnerWidget(QWidget *parent)
     outputView_->setObjectName(QStringLiteral("taskOutputView"));
     stopButton_->setEnabled(false);
     outputView_->setReadOnly(true);
+    outputView_->setOpenLinks(false);
 
     auto *toolbarLayout = new QHBoxLayout;
     toolbarLayout->addWidget(new QLabel(QStringLiteral("Task:"), this));
@@ -41,6 +43,20 @@ TaskRunnerWidget::TaskRunnerWidget(QWidget *parent)
 
     connect(runButton_, &QPushButton::clicked, this, &TaskRunnerWidget::runSelectedTask);
     connect(stopButton_, &QPushButton::clicked, this, &TaskRunnerWidget::stopRunningTask);
+    connect(outputView_, &QTextBrowser::anchorClicked, this, [this](const QUrl &url) {
+        if (url.scheme() != QStringLiteral("toide-diagnostic")) {
+            return;
+        }
+
+        bool ok = false;
+        const auto index = url.toString().section(QLatin1Char(':'), 1).toInt(&ok);
+        if (!ok || index < 0 || index >= taskDiagnostics_.size()) {
+            return;
+        }
+
+        const auto &diagnostic = taskDiagnostics_.at(index);
+        emit diagnosticOpenRequested(QDir(workspaceRoot_).filePath(diagnostic.filePath), diagnostic.line, diagnostic.column);
+    });
     connect(&processRunner_, &TaskProcessRunner::outputReceived, this, &TaskRunnerWidget::appendOutput);
     connect(&processRunner_, &TaskProcessRunner::errorReceived, this, &TaskRunnerWidget::appendOutput);
     connect(&processRunner_, &TaskProcessRunner::finished, this, [this](int exitCode) {
@@ -80,6 +96,7 @@ void TaskRunnerWidget::runSelectedTask()
 
     outputView_->clear();
     taskOutputBuffer_.clear();
+    taskDiagnostics_.clear();
     const auto &task = taskConfig_.tasks.at(taskIndex);
     const auto request = TaskExecutionRequest::fromTask(task, workspaceRoot_);
     stopRequested_ = false;
@@ -132,18 +149,24 @@ void TaskRunnerWidget::setTaskFinished(int exitCode)
 
 void TaskRunnerWidget::appendDiagnosticSummary()
 {
-    const auto diagnostics = TaskDiagnosticParser::parse(taskOutputBuffer_);
-    if (diagnostics.isEmpty()) {
+    taskDiagnostics_ = TaskDiagnosticParser::parse(taskOutputBuffer_);
+    if (taskDiagnostics_.isEmpty()) {
         return;
     }
 
-    appendOutput(QStringLiteral("\nDiagnostics:\n"));
-    for (const auto &diagnostic : diagnostics) {
-        appendOutput(QStringLiteral("%1: %2:%3:%4: %5\n")
-                         .arg(diagnostic.severity)
-                         .arg(diagnostic.filePath)
-                         .arg(diagnostic.line)
-                         .arg(diagnostic.column)
-                         .arg(diagnostic.message));
+    outputView_->moveCursor(QTextCursor::End);
+    outputView_->insertPlainText(QStringLiteral("\nDiagnostics:\n"));
+    for (int index = 0; index < taskDiagnostics_.size(); ++index) {
+        const auto &diagnostic = taskDiagnostics_.at(index);
+        const auto line = QStringLiteral("%1: %2:%3:%4: %5")
+                              .arg(diagnostic.severity)
+                              .arg(diagnostic.filePath)
+                              .arg(diagnostic.line)
+                              .arg(diagnostic.column)
+                              .arg(diagnostic.message);
+        outputView_->insertHtml(QStringLiteral("<a href=\"toide-diagnostic:%1\">%2</a><br>")
+                                    .arg(index)
+                                    .arg(line.toHtmlEscaped()));
     }
+    outputView_->moveCursor(QTextCursor::End);
 }

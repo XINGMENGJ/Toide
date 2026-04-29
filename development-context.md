@@ -47,6 +47,7 @@
 - `Run Example` 也会加载 `qt6.7-env.cmd`，避免运行示例 exe 时缺少 MinGW 运行库 DLL；如果 `build\\hello_toide.exe` 缺失则提示先运行 `Build Example`。
 - Tasks 面板会在任务结束后解析输出中的编译诊断，并追加 `Diagnostics:` 摘要。
 - 编辑器区域支持 `openFileAt(file, line, column)`，可打开文件并移动光标到指定行列。
+- Tasks 面板的诊断摘要项支持点击，点击后会通过主窗口打开对应文件并跳转到行列位置。
 
 ## 最近一次问题
 
@@ -65,8 +66,8 @@ Qt Creator 页面编译失败，错误集中在：
 ## 当前未提交改动
 
 - 已提交并推送 `61d59db feat: summarize compiler diagnostics in tasks`。
-- 本轮未提交改动：编辑器打开文件并跳转指定行列能力。
+- 本轮未提交改动：Tasks 诊断摘要点击打开文件位置。
 
 ## 下一步建议
 
-下一步可以把 Tasks 诊断摘要连接到编辑器定位能力，实现点击诊断打开对应文件位置。
+下一步可以把诊断摘要从纯文本输出升级为更清晰的独立列表，或继续做 Git 状态面板。

@@ -51,6 +51,8 @@
 - Git 标签页起步版可在打开工作区时显示 `git status --short --branch`，非 Git 目录会显示提示。
 - Git 状态面板会把 `git status --short --branch` 整理成 Branch、Staged、Unstaged、Untracked 分组。
 - Git 状态面板会显示刷新结果：成功、非 Git 仓库、超时或未打开工作区。
+- Git 状态面板刷新结果提示已提交并推送：`9fcb740 feat: show git refresh status`。
+- Git 状态面板提供 `Copy status` 按钮，可复制当前整理后的状态文本到剪贴板。
 
 ## 最近一次问题
 
@@ -68,9 +70,9 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `5b82b7b feat: group git status output`。
-- 本轮未提交改动：Git 状态面板刷新结果提示。
+- 已提交并推送 `9fcb740 feat: show git refresh status`。
+- 本轮未提交改动：Git 状态面板复制当前状态到剪贴板。
 
 ## 下一步建议
 
-下一步可以继续为 Git 面板加入常用操作按钮，例如刷新、打开终端、复制状态。
+下一步可以继续为 Git 面板加入打开终端等常用操作。

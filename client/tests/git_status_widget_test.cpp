@@ -2,8 +2,10 @@
 
 #include "git/git_status_widget.h"
 
+#include <QClipboard>
 #include <QLabel>
 #include <QProcess>
+#include <QPushButton>
 #include <QTemporaryDir>
 #include <QTextEdit>
 
@@ -14,6 +16,7 @@ private slots:
     void loadStatusFromGitWorkspaceShowsBranchAndChanges();
     void loadStatusFromGitWorkspaceGroupsChanges();
     void loadStatusShowsRefreshResult();
+    void copyStatusCopiesCurrentStatusToClipboard();
     void loadStatusFromNonGitWorkspaceShowsHelpfulMessage();
 };
 
@@ -99,6 +102,32 @@ void GitStatusWidgetTest::loadStatusShowsRefreshResult()
     QVERIFY(nonGitWorkspace.isValid());
     QVERIFY(!widget.loadStatusFromWorkspace(nonGitWorkspace.path()));
     QVERIFY(statusLabel->text().contains(QStringLiteral("Not a Git repository")));
+}
+
+void GitStatusWidgetTest::copyStatusCopiesCurrentStatusToClipboard()
+{
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("init")}));
+
+    QFile file(workspace.filePath(QStringLiteral("notes.txt")));
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+    file.write("hello\n");
+    file.close();
+
+    GitStatusWidget widget;
+    QVERIFY(widget.loadStatusFromWorkspace(workspace.path()));
+
+    auto *statusView = widget.findChild<QTextEdit *>(QStringLiteral("gitStatusView"));
+    QVERIFY(statusView != nullptr);
+    auto *copyButton = widget.findChild<QPushButton *>(QStringLiteral("copyGitStatusButton"));
+    QVERIFY(copyButton != nullptr);
+
+    QGuiApplication::clipboard()->clear();
+    copyButton->click();
+
+    QCOMPARE(QGuiApplication::clipboard()->text(), statusView->toPlainText());
+    QVERIFY(QGuiApplication::clipboard()->text().contains(QStringLiteral("notes.txt")));
 }
 
 void GitStatusWidgetTest::loadStatusFromNonGitWorkspaceShowsHelpfulMessage()

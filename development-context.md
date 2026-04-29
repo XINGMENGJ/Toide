@@ -45,6 +45,7 @@
 - 默认示例工作区的编译任务会先加载 `qt6.7-env.cmd`，避免程序内 PATH 缺少 `g++` 或调用旧编译器。
 - 默认示例工作区的编译任务不再使用 `if not exist build mkdir build && ...`，避免 `build` 目录已存在时跳过真正的编译命令。
 - `Run Example` 也会加载 `qt6.7-env.cmd`，避免运行示例 exe 时缺少 MinGW 运行库 DLL；如果 `build\\hello_toide.exe` 缺失则提示先运行 `Build Example`。
+- Tasks 面板会在任务结束后解析输出中的编译诊断，并追加 `Diagnostics:` 摘要。
 
 ## 最近一次问题
 
@@ -62,9 +63,9 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `6dc9baf feat: parse compiler diagnostics`。
-- 本轮未提交改动：默认示例工作区新增诊断验证文件、任务和说明文档，并修复示例编译任务的环境初始化和缺失 exe 提示。
+- 已提交并推送 `16e7b79 fix: stabilize example build tasks`。
+- 本轮未提交改动：Tasks 输出面板编译诊断摘要。
 
 ## 下一步建议
 
-下一步可以把诊断解析结果接入 Tasks 输出面板，显示结构化错误列表并支持打开对应文件。
+下一步可以将诊断摘要升级为可点击列表，并打开对应文件位置。

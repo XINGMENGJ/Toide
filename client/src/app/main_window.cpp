@@ -103,6 +103,7 @@ void MainWindow::createLayout()
     setCentralWidget(rootSplitter);
 
     connect(fileExplorer_, &FileExplorerWidget::fileOpenRequested, editorArea_, &EditorAreaWidget::openFile);
+    connect(taskRunner_, &TaskRunnerWidget::diagnosticOpenRequested, editorArea_, &EditorAreaWidget::openFileAt);
 }
 
 void MainWindow::chooseProjectDirectory()

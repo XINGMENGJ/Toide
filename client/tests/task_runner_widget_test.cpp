@@ -14,6 +14,8 @@ class TaskRunnerWidgetTest final : public QObject {
 private slots:
     void loadTasksFromWorkspacePopulatesTaskList();
     void clickingRunExecutesSelectedTaskAndDisplaysOutput();
+    void successfulTaskShowsSucceededStatus();
+    void failedTaskShowsExitCodeStatus();
     void stopButtonStopsRunningTaskAndRestoresIdleState();
 };
 
@@ -82,6 +84,83 @@ void TaskRunnerWidgetTest::clickingRunExecutesSelectedTaskAndDisplaysOutput()
     QTest::mouseClick(runButton, Qt::LeftButton);
 
     QTRY_VERIFY_WITH_TIMEOUT(outputView->toPlainText().contains(QStringLiteral("WidgetTask")), 3000);
+}
+
+void TaskRunnerWidgetTest::successfulTaskShowsSucceededStatus()
+{
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(QDir(workspace.path()).mkpath(QStringLiteral(".toide")));
+
+    QFile tasksFile(workspace.filePath(QStringLiteral(".toide/tasks.json")));
+    QVERIFY(tasksFile.open(QIODevice::WriteOnly | QIODevice::Text));
+    tasksFile.write(R"({
+  "tasks": [
+    {
+      "name": "Success",
+      "command": "echo Done",
+      "workingDirectory": "${workspaceRoot}"
+    }
+  ]
+})");
+    tasksFile.close();
+
+    TaskRunnerWidget widget;
+    QVERIFY(widget.loadTasksFromWorkspace(workspace.path()));
+
+    auto *runButton = widget.findChild<QPushButton *>(QStringLiteral("runTaskButton"));
+    auto *stopButton = widget.findChild<QPushButton *>(QStringLiteral("stopTaskButton"));
+    auto *statusLabel = widget.findChild<QLabel *>(QStringLiteral("taskStatusLabel"));
+    QVERIFY(runButton != nullptr);
+    QVERIFY(stopButton != nullptr);
+    QVERIFY(statusLabel != nullptr);
+
+    QTest::mouseClick(runButton, Qt::LeftButton);
+
+    QTRY_COMPARE_WITH_TIMEOUT(statusLabel->text(), QStringLiteral("Succeeded"), 3000);
+    QVERIFY(runButton->isEnabled());
+    QVERIFY(!stopButton->isEnabled());
+}
+
+void TaskRunnerWidgetTest::failedTaskShowsExitCodeStatus()
+{
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(QDir(workspace.path()).mkpath(QStringLiteral(".toide")));
+
+    QFile tasksFile(workspace.filePath(QStringLiteral(".toide/tasks.json")));
+    QVERIFY(tasksFile.open(QIODevice::WriteOnly | QIODevice::Text));
+#ifdef Q_OS_WIN
+    const auto command = QStringLiteral("exit /b 7");
+#else
+    const auto command = QStringLiteral("exit 7");
+#endif
+    tasksFile.write(QStringLiteral(R"({
+  "tasks": [
+    {
+      "name": "Failure",
+      "command": "%1",
+      "workingDirectory": "${workspaceRoot}"
+    }
+  ]
+})").arg(command).toUtf8());
+    tasksFile.close();
+
+    TaskRunnerWidget widget;
+    QVERIFY(widget.loadTasksFromWorkspace(workspace.path()));
+
+    auto *runButton = widget.findChild<QPushButton *>(QStringLiteral("runTaskButton"));
+    auto *stopButton = widget.findChild<QPushButton *>(QStringLiteral("stopTaskButton"));
+    auto *statusLabel = widget.findChild<QLabel *>(QStringLiteral("taskStatusLabel"));
+    QVERIFY(runButton != nullptr);
+    QVERIFY(stopButton != nullptr);
+    QVERIFY(statusLabel != nullptr);
+
+    QTest::mouseClick(runButton, Qt::LeftButton);
+
+    QTRY_COMPARE_WITH_TIMEOUT(statusLabel->text(), QStringLiteral("Failed: exit code 7"), 3000);
+    QVERIFY(runButton->isEnabled());
+    QVERIFY(!stopButton->isEnabled());
 }
 
 void TaskRunnerWidgetTest::stopButtonStopsRunningTaskAndRestoresIdleState()

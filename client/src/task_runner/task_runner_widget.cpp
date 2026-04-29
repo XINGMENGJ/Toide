@@ -44,7 +44,7 @@ TaskRunnerWidget::TaskRunnerWidget(QWidget *parent)
     connect(&processRunner_, &TaskProcessRunner::errorReceived, this, &TaskRunnerWidget::appendOutput);
     connect(&processRunner_, &TaskProcessRunner::finished, this, [this](int exitCode) {
         appendOutput(QStringLiteral("\nProcess finished with exit code %1\n").arg(exitCode));
-        setTaskRunning(false);
+        setTaskFinished(exitCode);
     });
 }
 
@@ -80,6 +80,7 @@ void TaskRunnerWidget::runSelectedTask()
     outputView_->clear();
     const auto &task = taskConfig_.tasks.at(taskIndex);
     const auto request = TaskExecutionRequest::fromTask(task, workspaceRoot_);
+    stopRequested_ = false;
     if (!processRunner_.start(request)) {
         setTaskRunning(false);
         outputView_->setPlainText(QStringLiteral("Failed to start task."));
@@ -91,6 +92,7 @@ void TaskRunnerWidget::runSelectedTask()
 
 void TaskRunnerWidget::stopRunningTask()
 {
+    stopRequested_ = true;
     processRunner_.stop();
 }
 
@@ -106,4 +108,20 @@ void TaskRunnerWidget::setTaskRunning(bool isRunning, const QString &taskName)
     runButton_->setEnabled(!isRunning);
     stopButton_->setEnabled(isRunning);
     statusLabel_->setText(isRunning ? QStringLiteral("Running: %1").arg(taskName) : QStringLiteral("Idle"));
+}
+
+void TaskRunnerWidget::setTaskFinished(int exitCode)
+{
+    runButton_->setEnabled(true);
+    stopButton_->setEnabled(false);
+
+    if (stopRequested_) {
+        stopRequested_ = false;
+        statusLabel_->setText(QStringLiteral("Idle"));
+        return;
+    }
+
+    statusLabel_->setText(exitCode == 0
+                              ? QStringLiteral("Succeeded")
+                              : QStringLiteral("Failed: exit code %1").arg(exitCode));
 }

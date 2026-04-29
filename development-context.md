@@ -39,6 +39,7 @@
 - Tasks 面板支持运行状态展示：空闲显示 `Idle`，运行中显示当前任务名。
 - Tasks 面板支持 Stop 按钮，可中止正在运行的 `QProcess` 任务。
 - 默认示例工作区提供 `Build Example` 和 `Run Example` 任务，可演示基础 C++ 编译/运行流程。
+- Tasks 面板在任务自然结束后显示 `Succeeded` 或 `Failed: exit code N`，让编译结果更清晰。
 
 ## 最近一次问题
 
@@ -56,9 +57,9 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `cc41ca8 feat: show task run state and stop tasks`。
-- 本轮未提交改动：默认示例工作区新增 `Build Example` / `Run Example` 编译运行任务。
+- 已提交并推送 `e19a70d feat: add build tasks to example workspace`。
+- 本轮未提交改动：Tasks 面板任务结果状态显示。
 
 ## 下一步建议
 
-下一步可以把 Build/Run 从通用 Tasks 下拉框升级为更明确的工具栏入口，并补充编译错误解析。
+下一步可以继续做编译错误解析，或把 Build/Run 从通用 Tasks 下拉框升级为专用入口。

@@ -12,6 +12,7 @@ public:
 
 public slots:
     bool openFile(const QString &filePath);
+    bool openFileAt(const QString &filePath, int line, int column);
     bool saveCurrentFile();
 
 private:

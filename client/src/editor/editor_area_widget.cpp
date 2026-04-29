@@ -48,6 +48,21 @@ bool EditorAreaWidget::openFile(const QString &filePath)
     return true;
 }
 
+bool EditorAreaWidget::openFileAt(const QString &filePath, int line, int column)
+{
+    if (!openFile(filePath)) {
+        return false;
+    }
+
+    auto *editor = qobject_cast<EditorTab *>(tabs_->currentWidget());
+    if (editor == nullptr) {
+        return false;
+    }
+
+    editor->moveCursorTo(line, column);
+    return true;
+}
+
 bool EditorAreaWidget::saveCurrentFile()
 {
     auto *editor = qobject_cast<EditorTab *>(tabs_->currentWidget());

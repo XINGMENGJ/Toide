@@ -46,6 +46,7 @@
 - 默认示例工作区的编译任务不再使用 `if not exist build mkdir build && ...`，避免 `build` 目录已存在时跳过真正的编译命令。
 - `Run Example` 也会加载 `qt6.7-env.cmd`，避免运行示例 exe 时缺少 MinGW 运行库 DLL；如果 `build\\hello_toide.exe` 缺失则提示先运行 `Build Example`。
 - Tasks 面板会在任务结束后解析输出中的编译诊断，并追加 `Diagnostics:` 摘要。
+- 编辑器区域支持 `openFileAt(file, line, column)`，可打开文件并移动光标到指定行列。
 
 ## 最近一次问题
 
@@ -63,9 +64,9 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `16e7b79 fix: stabilize example build tasks`。
-- 本轮未提交改动：Tasks 输出面板编译诊断摘要。
+- 已提交并推送 `61d59db feat: summarize compiler diagnostics in tasks`。
+- 本轮未提交改动：编辑器打开文件并跳转指定行列能力。
 
 ## 下一步建议
 
-下一步可以将诊断摘要升级为可点击列表，并打开对应文件位置。
+下一步可以把 Tasks 诊断摘要连接到编辑器定位能力，实现点击诊断打开对应文件位置。

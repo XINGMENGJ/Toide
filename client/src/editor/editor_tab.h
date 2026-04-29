@@ -17,6 +17,7 @@ public:
     bool loadFile(const QString &filePath);
     bool save();
     void setText(const QString &text);
+    void moveCursorTo(int line, int column);
 
 signals:
     void dirtyChanged(bool dirty);

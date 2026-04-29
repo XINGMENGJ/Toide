@@ -3,6 +3,7 @@
 #include "task_runner/task_runner_widget.h"
 
 #include <QComboBox>
+#include <QLabel>
 #include <QPushButton>
 #include <QTemporaryDir>
 #include <QTextEdit>
@@ -13,6 +14,7 @@ class TaskRunnerWidgetTest final : public QObject {
 private slots:
     void loadTasksFromWorkspacePopulatesTaskList();
     void clickingRunExecutesSelectedTaskAndDisplaysOutput();
+    void stopButtonStopsRunningTaskAndRestoresIdleState();
 };
 
 void TaskRunnerWidgetTest::loadTasksFromWorkspacePopulatesTaskList()
@@ -80,6 +82,56 @@ void TaskRunnerWidgetTest::clickingRunExecutesSelectedTaskAndDisplaysOutput()
     QTest::mouseClick(runButton, Qt::LeftButton);
 
     QTRY_VERIFY_WITH_TIMEOUT(outputView->toPlainText().contains(QStringLiteral("WidgetTask")), 3000);
+}
+
+void TaskRunnerWidgetTest::stopButtonStopsRunningTaskAndRestoresIdleState()
+{
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(QDir(workspace.path()).mkpath(QStringLiteral(".toide")));
+
+    QFile tasksFile(workspace.filePath(QStringLiteral(".toide/tasks.json")));
+    QVERIFY(tasksFile.open(QIODevice::WriteOnly | QIODevice::Text));
+#ifdef Q_OS_WIN
+    const auto command = QStringLiteral("ping 127.0.0.1 -n 6");
+#else
+    const auto command = QStringLiteral("sleep 5");
+#endif
+    tasksFile.write(QStringLiteral(R"({
+  "tasks": [
+    {
+      "name": "Long Running",
+      "command": "%1",
+      "workingDirectory": "${workspaceRoot}"
+    }
+  ]
+})").arg(command).toUtf8());
+    tasksFile.close();
+
+    TaskRunnerWidget widget;
+    QVERIFY(widget.loadTasksFromWorkspace(workspace.path()));
+
+    auto *runButton = widget.findChild<QPushButton *>(QStringLiteral("runTaskButton"));
+    auto *stopButton = widget.findChild<QPushButton *>(QStringLiteral("stopTaskButton"));
+    auto *statusLabel = widget.findChild<QLabel *>(QStringLiteral("taskStatusLabel"));
+    QVERIFY(runButton != nullptr);
+    QVERIFY(stopButton != nullptr);
+    QVERIFY(statusLabel != nullptr);
+    QVERIFY(runButton->isEnabled());
+    QVERIFY(!stopButton->isEnabled());
+    QCOMPARE(statusLabel->text(), QStringLiteral("Idle"));
+
+    QTest::mouseClick(runButton, Qt::LeftButton);
+
+    QTRY_VERIFY_WITH_TIMEOUT(!runButton->isEnabled(), 1000);
+    QVERIFY(stopButton->isEnabled());
+    QCOMPARE(statusLabel->text(), QStringLiteral("Running: Long Running"));
+
+    QTest::mouseClick(stopButton, Qt::LeftButton);
+
+    QTRY_VERIFY_WITH_TIMEOUT(runButton->isEnabled(), 3000);
+    QVERIFY(!stopButton->isEnabled());
+    QCOMPARE(statusLabel->text(), QStringLiteral("Idle"));
 }
 
 QTEST_MAIN(TaskRunnerWidgetTest)

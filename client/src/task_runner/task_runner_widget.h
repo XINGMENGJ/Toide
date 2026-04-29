@@ -6,6 +6,7 @@
 #include <QWidget>
 
 class QComboBox;
+class QLabel;
 class QPushButton;
 class QTextEdit;
 
@@ -19,10 +20,14 @@ public:
 
 private:
     void runSelectedTask();
+    void stopRunningTask();
     void appendOutput(const QString &output);
+    void setTaskRunning(bool isRunning, const QString &taskName = {});
 
     QComboBox *taskSelector_ = nullptr;
     QPushButton *runButton_ = nullptr;
+    QPushButton *stopButton_ = nullptr;
+    QLabel *statusLabel_ = nullptr;
     QTextEdit *outputView_ = nullptr;
     TaskConfig taskConfig_;
     QString workspaceRoot_;

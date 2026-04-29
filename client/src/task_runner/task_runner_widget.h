@@ -24,6 +24,7 @@ private:
     void appendOutput(const QString &output);
     void setTaskRunning(bool isRunning, const QString &taskName = {});
     void setTaskFinished(int exitCode);
+    void appendDiagnosticSummary();
 
     QComboBox *taskSelector_ = nullptr;
     QPushButton *runButton_ = nullptr;
@@ -32,6 +33,7 @@ private:
     QTextEdit *outputView_ = nullptr;
     TaskConfig taskConfig_;
     QString workspaceRoot_;
+    QString taskOutputBuffer_;
     bool stopRequested_ = false;
     TaskProcessRunner processRunner_;
 };

@@ -16,6 +16,7 @@ private slots:
     void clickingRunExecutesSelectedTaskAndDisplaysOutput();
     void successfulTaskShowsSucceededStatus();
     void failedTaskShowsExitCodeStatus();
+    void compilerOutputShowsDiagnosticSummary();
     void stopButtonStopsRunningTaskAndRestoresIdleState();
 };
 
@@ -161,6 +162,44 @@ void TaskRunnerWidgetTest::failedTaskShowsExitCodeStatus()
     QTRY_COMPARE_WITH_TIMEOUT(statusLabel->text(), QStringLiteral("Failed: exit code 7"), 3000);
     QVERIFY(runButton->isEnabled());
     QVERIFY(!stopButton->isEnabled());
+}
+
+void TaskRunnerWidgetTest::compilerOutputShowsDiagnosticSummary()
+{
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(QDir(workspace.path()).mkpath(QStringLiteral(".toide")));
+
+    QFile tasksFile(workspace.filePath(QStringLiteral(".toide/tasks.json")));
+    QVERIFY(tasksFile.open(QIODevice::WriteOnly | QIODevice::Text));
+#ifdef Q_OS_WIN
+    const auto command = QStringLiteral("echo src/hello_toide.cpp:5:18: error: expected semicolon && exit /b 1");
+#else
+    const auto command = QStringLiteral("printf \"src/hello_toide.cpp:5:18: error: expected semicolon\\n\"; exit 1");
+#endif
+    tasksFile.write(QStringLiteral(R"({
+  "tasks": [
+    {
+      "name": "Compile Failure",
+      "command": "%1",
+      "workingDirectory": "${workspaceRoot}"
+    }
+  ]
+})").arg(command).toUtf8());
+    tasksFile.close();
+
+    TaskRunnerWidget widget;
+    QVERIFY(widget.loadTasksFromWorkspace(workspace.path()));
+
+    auto *runButton = widget.findChild<QPushButton *>(QStringLiteral("runTaskButton"));
+    auto *outputView = widget.findChild<QTextEdit *>(QStringLiteral("taskOutputView"));
+    QVERIFY(runButton != nullptr);
+    QVERIFY(outputView != nullptr);
+
+    QTest::mouseClick(runButton, Qt::LeftButton);
+
+    QTRY_VERIFY_WITH_TIMEOUT(outputView->toPlainText().contains(QStringLiteral("Diagnostics:")), 3000);
+    QVERIFY(outputView->toPlainText().contains(QStringLiteral("error: src/hello_toide.cpp:5:18: expected semicolon")));
 }
 
 void TaskRunnerWidgetTest::stopButtonStopsRunningTaskAndRestoresIdleState()

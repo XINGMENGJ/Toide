@@ -1,5 +1,6 @@
 #include "task_runner/task_runner_widget.h"
 
+#include "task_runner/task_diagnostic_parser.h"
 #include "task_runner/task_execution_request.h"
 
 #include <QComboBox>
@@ -78,6 +79,7 @@ void TaskRunnerWidget::runSelectedTask()
     }
 
     outputView_->clear();
+    taskOutputBuffer_.clear();
     const auto &task = taskConfig_.tasks.at(taskIndex);
     const auto request = TaskExecutionRequest::fromTask(task, workspaceRoot_);
     stopRequested_ = false;
@@ -98,6 +100,7 @@ void TaskRunnerWidget::stopRunningTask()
 
 void TaskRunnerWidget::appendOutput(const QString &output)
 {
+    taskOutputBuffer_.append(output);
     outputView_->moveCursor(QTextCursor::End);
     outputView_->insertPlainText(output);
     outputView_->moveCursor(QTextCursor::End);
@@ -121,7 +124,26 @@ void TaskRunnerWidget::setTaskFinished(int exitCode)
         return;
     }
 
+    appendDiagnosticSummary();
     statusLabel_->setText(exitCode == 0
                               ? QStringLiteral("Succeeded")
                               : QStringLiteral("Failed: exit code %1").arg(exitCode));
+}
+
+void TaskRunnerWidget::appendDiagnosticSummary()
+{
+    const auto diagnostics = TaskDiagnosticParser::parse(taskOutputBuffer_);
+    if (diagnostics.isEmpty()) {
+        return;
+    }
+
+    appendOutput(QStringLiteral("\nDiagnostics:\n"));
+    for (const auto &diagnostic : diagnostics) {
+        appendOutput(QStringLiteral("%1: %2:%3:%4: %5\n")
+                         .arg(diagnostic.severity)
+                         .arg(diagnostic.filePath)
+                         .arg(diagnostic.line)
+                         .arg(diagnostic.column)
+                         .arg(diagnostic.message));
+    }
 }

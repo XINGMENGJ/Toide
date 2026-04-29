@@ -20,6 +20,7 @@ private slots:
     void loadStatusFromGitWorkspaceShowsChangeSummaryCounts();
     void loadStatusShowsRefreshResult();
     void copyStatusCopiesCurrentStatusToClipboard();
+    void copyStatusShowsCopiedFeedback();
     void openTerminalRequestsCurrentWorkspace();
     void loadStatusFromNonGitWorkspaceShowsHelpfulMessage();
 };
@@ -190,6 +191,25 @@ void GitStatusWidgetTest::copyStatusCopiesCurrentStatusToClipboard()
 
     QCOMPARE(QGuiApplication::clipboard()->text(), statusView->toPlainText());
     QVERIFY(QGuiApplication::clipboard()->text().contains(QStringLiteral("notes.txt")));
+}
+
+void GitStatusWidgetTest::copyStatusShowsCopiedFeedback()
+{
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("init")}));
+
+    GitStatusWidget widget;
+    QVERIFY(widget.loadStatusFromWorkspace(workspace.path()));
+
+    auto *statusLabel = widget.findChild<QLabel *>(QStringLiteral("gitRefreshStatusLabel"));
+    QVERIFY(statusLabel != nullptr);
+    auto *copyButton = widget.findChild<QPushButton *>(QStringLiteral("copyGitStatusButton"));
+    QVERIFY(copyButton != nullptr);
+
+    copyButton->click();
+
+    QVERIFY(statusLabel->text().contains(QStringLiteral("Copied status")));
 }
 
 void GitStatusWidgetTest::openTerminalRequestsCurrentWorkspace()

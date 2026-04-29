@@ -53,6 +53,61 @@ bool GitStatusWidget::loadStatusFromWorkspace(const QString &workspaceRoot)
         return false;
     }
 
-    statusView_->setPlainText(output.trimmed().isEmpty() ? QStringLiteral("Working tree clean.") : output);
+    statusView_->setPlainText(formatStatusOutput(output));
     return true;
+}
+
+QString GitStatusWidget::formatStatusOutput(const QString &statusOutput)
+{
+    const auto lines = statusOutput.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    QString branchLine;
+    QStringList staged;
+    QStringList unstaged;
+    QStringList untracked;
+
+    for (const auto &line : lines) {
+        if (line.startsWith(QStringLiteral("##"))) {
+            branchLine = line.mid(3).trimmed();
+            continue;
+        }
+
+        if (line.size() < 3) {
+            continue;
+        }
+
+        const auto indexStatus = line.at(0);
+        const auto workingTreeStatus = line.at(1);
+        const auto filePath = line.mid(3).trimmed();
+
+        if (indexStatus == QLatin1Char('?') && workingTreeStatus == QLatin1Char('?')) {
+            untracked.append(filePath);
+            continue;
+        }
+
+        if (indexStatus != QLatin1Char(' ')) {
+            staged.append(QStringLiteral("%1 %2").arg(indexStatus, filePath));
+        }
+
+        if (workingTreeStatus != QLatin1Char(' ')) {
+            unstaged.append(QStringLiteral("%1 %2").arg(workingTreeStatus, filePath));
+        }
+    }
+
+    QStringList formatted;
+    formatted.append(QStringLiteral("Branch"));
+    formatted.append(branchLine.isEmpty() ? QStringLiteral("(unknown)") : branchLine);
+    formatted.append(QString());
+
+    formatted.append(QStringLiteral("Staged"));
+    formatted.append(staged.isEmpty() ? QStringLiteral("(none)") : staged.join(QLatin1Char('\n')));
+    formatted.append(QString());
+
+    formatted.append(QStringLiteral("Unstaged"));
+    formatted.append(unstaged.isEmpty() ? QStringLiteral("(none)") : unstaged.join(QLatin1Char('\n')));
+    formatted.append(QString());
+
+    formatted.append(QStringLiteral("Untracked"));
+    formatted.append(untracked.isEmpty() ? QStringLiteral("(none)") : untracked.join(QLatin1Char('\n')));
+
+    return formatted.join(QLatin1Char('\n'));
 }

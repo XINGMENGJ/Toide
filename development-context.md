@@ -49,6 +49,7 @@
 - 编辑器区域支持 `openFileAt(file, line, column)`，可打开文件并移动光标到指定行列。
 - Tasks 面板的诊断摘要项支持点击，点击后会通过主窗口打开对应文件并跳转到行列位置。
 - Git 标签页起步版可在打开工作区时显示 `git status --short --branch`，非 Git 目录会显示提示。
+- Git 状态面板会把 `git status --short --branch` 整理成 Branch、Staged、Unstaged、Untracked 分组。
 
 ## 最近一次问题
 
@@ -66,9 +67,9 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `a3a6707 feat: open diagnostics from task output`。
-- 本轮未提交改动：Git 状态面板起步版和对应测试。
+- 已提交并推送 `ad32f57 feat: add git status panel`。
+- 本轮未提交改动：Git 状态面板 staged/unstaged/untracked 分组展示。
 
 ## 下一步建议
 
-下一步可以继续完善 Git 面板的 staged/unstaged 分组、刷新状态提示和常用操作按钮。
+下一步可以继续完善 Git 面板的刷新状态提示和常用操作按钮。

@@ -74,6 +74,7 @@
 - 网络协作主线已启动：后端数据库路线从 PostgreSQL 调整为 MySQL + Redis。
 - 新增 `server/` 后端骨架：包含可测试的 `toide_server_core`、health 响应生成、配置样例和 Drogon 控制器入口。
 - 当前本机未发现 Drogon 包，CMake 会先构建 server core 和测试；安装 Drogon 后会自动构建 `toide_server` 可执行文件。
+- 安装 Drogon 时，`toide_server` 增加 `CollaborationWsController`：WebSocket 路径正则 `^/ws/projects/([^/]+)$`，握手后发送 `server.welcome`，同项目房间广播 `presence.user_joined` / `presence.user_left`；支持客户端 JSON `heartbeat` → `heartbeat.ack`，以及 `presence.join`、`presence.current_file` 向其他连接转发（用户占位 `anonymous`，`?token=` 校验与真实用户身份待接）。
 - 客户端新增 `NetworkClient`，可请求服务端 `/api/health` 并通过 `healthChecked` 信号报告 Online/Offline 状态。
 - 主窗口右侧协作面板从占位列表升级为 `CollaborationPanelWidget`，提供 `Check server` 按钮并显示服务端连接状态；健康检查请求 `NetworkClient::checkHealth`，URL 为设置中的服务端基址 + `/api/health`。
 - 客户端 `ServerEndpointSettings` 将协作服务端基址（默认 `http://127.0.0.1:8848`）持久化到 `QStandardPaths::AppConfigLocation` 下的 `toide-client.ini`（键 `network/serverBaseUrl`）；协作面板提供可编辑行，失焦与点击检查时写回并规范化 URL；单测可用临时 ini 路径隔离。
@@ -101,4 +102,4 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 下一步建议
 
-继续实现服务端 Drogon WebSocket 入口（`/ws/projects/:id`）与房间/鉴权，使客户端协作通道能真正握手与广播（见 `collaborative-dev-platform-development-guide.md` §7）。
+为 WebSocket 增加 `token` / 项目成员校验、持久化用户身份，并在客户端连接后自动发送 `presence.join` 与文档约定事件（见 `collaborative-dev-platform-development-guide.md` §7）。

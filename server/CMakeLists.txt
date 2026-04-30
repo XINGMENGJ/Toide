@@ -22,6 +22,7 @@ find_package(Drogon CONFIG QUIET)
 if(Drogon_FOUND)
     add_executable(toide_server
         src/main.cpp
+        src/api/collaboration_ws_controller.cpp
         src/api/health_controller.cpp
     )
 

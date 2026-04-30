@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QTextBrowser>
 #include <QTextCursor>
@@ -18,6 +19,8 @@ TaskRunnerWidget::TaskRunnerWidget(QWidget *parent)
     , runButton_(new QPushButton(QStringLiteral("Run"), this))
     , stopButton_(new QPushButton(QStringLiteral("Stop"), this))
     , statusLabel_(new QLabel(QStringLiteral("Idle"), this))
+    , terminalCommandEdit_(new QLineEdit(this))
+    , terminalRunButton_(new QPushButton(QStringLiteral("Run command"), this))
     , outputView_(new QTextBrowser(this))
 {
     taskSelector_->setObjectName(QStringLiteral("taskSelector"));
@@ -28,6 +31,9 @@ TaskRunnerWidget::TaskRunnerWidget(QWidget *parent)
     stopButton_->setEnabled(false);
     outputView_->setReadOnly(true);
     outputView_->setOpenLinks(false);
+    terminalCommandEdit_->setObjectName(QStringLiteral("terminalCommandLineEdit"));
+    terminalRunButton_->setObjectName(QStringLiteral("terminalRunButton"));
+    terminalCommandEdit_->setPlaceholderText(QStringLiteral("Terminal command in workspace..."));
 
     auto *toolbarLayout = new QHBoxLayout;
     toolbarLayout->addWidget(new QLabel(QStringLiteral("Task:"), this));
@@ -36,13 +42,37 @@ TaskRunnerWidget::TaskRunnerWidget(QWidget *parent)
     toolbarLayout->addWidget(runButton_);
     toolbarLayout->addWidget(stopButton_);
 
+    auto *terminalLayout = new QHBoxLayout;
+    terminalLayout->addWidget(new QLabel(QStringLiteral("Terminal:"), this));
+    terminalLayout->addWidget(terminalCommandEdit_, 1);
+    terminalLayout->addWidget(terminalRunButton_);
+
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(4, 4, 4, 4);
     layout->addLayout(toolbarLayout);
+    layout->addLayout(terminalLayout);
     layout->addWidget(outputView_, 1);
 
     connect(runButton_, &QPushButton::clicked, this, &TaskRunnerWidget::runSelectedTask);
     connect(stopButton_, &QPushButton::clicked, this, &TaskRunnerWidget::stopRunningTask);
+    connect(terminalRunButton_, &QPushButton::clicked, this, [this]() {
+        if (!runButton_->isEnabled()) {
+            appendOutput(QStringLiteral("\nA task is already running. Stop it before starting another command.\n"));
+            return;
+        }
+        const QString command = terminalCommandEdit_->text().trimmed();
+        if (command.isEmpty()) {
+            outputView_->setPlainText(QStringLiteral("No terminal command entered."));
+            return;
+        }
+        if (!processRunner_.start(TaskExecutionRequest{QStringLiteral("terminal"), command, workspaceRoot_})) {
+            outputView_->setPlainText(QStringLiteral("Failed to start terminal command."));
+            return;
+        }
+        outputView_->clear();
+        taskOutputBuffer_.clear();
+        setTaskRunning(true, QStringLiteral("terminal"));
+    });
     connect(outputView_, &QTextBrowser::anchorClicked, this, [this](const QUrl &url) {
         if (url.scheme() != QStringLiteral("toide-diagnostic")) {
             return;
@@ -88,6 +118,10 @@ bool TaskRunnerWidget::loadTasksFromWorkspace(const QString &workspaceRoot)
 
 void TaskRunnerWidget::runSelectedTask()
 {
+    if (!runButton_->isEnabled()) {
+        appendOutput(QStringLiteral("\nA task is already running. Stop it before starting another command.\n"));
+        return;
+    }
     const auto taskIndex = taskSelector_->currentIndex();
     if (taskIndex < 0 || taskIndex >= taskConfig_.tasks.size()) {
         outputView_->setPlainText(QStringLiteral("No task selected."));
@@ -126,6 +160,7 @@ void TaskRunnerWidget::appendOutput(const QString &output)
 void TaskRunnerWidget::setTaskRunning(bool isRunning, const QString &taskName)
 {
     runButton_->setEnabled(!isRunning);
+    terminalRunButton_->setEnabled(!isRunning);
     stopButton_->setEnabled(isRunning);
     statusLabel_->setText(isRunning ? QStringLiteral("Running: %1").arg(taskName) : QStringLiteral("Idle"));
 }

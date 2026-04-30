@@ -20,6 +20,10 @@ public:
 
     QString collaborationClientId() const;
     QString ensureCollaborationClientId();
+    QString authToken() const;
+    QString username() const;
+    void setAuthSession(const QString &token, const QString &username);
+    void clearAuthSession();
     static QString normalizeBaseUrl(QString url);
 
     std::unique_ptr<QSettings> settings_;

@@ -15,11 +15,15 @@ public:
 signals:
     void currentFilePathChanged(const QString &absolutePath);
     void currentFileSaved(const QString &absolutePath);
+    void fileTextEdited(const QString &absolutePath, const QString &text);
+    void cursorPositionChanged(const QString &absolutePath, int line, int column);
 
 public slots:
     bool openFile(const QString &filePath);
     bool openFileAt(const QString &filePath, int line, int column);
     bool saveCurrentFile();
+    void applyRemoteFileText(const QString &absolutePath, const QString &text);
+    void showRemoteCursor(const QString &absolutePath, const QString &username, int line, int column);
 
 private:
     [[nodiscard]] int findTabByFilePath(const QString &filePath) const;

@@ -58,6 +58,8 @@ bool EditorAreaWidget::openFile(const QString &filePath)
     connect(editor, &EditorTab::dirtyChanged, this, [this, editor](bool) {
         updateTabTitle(tabs_->indexOf(editor));
     });
+    connect(editor, &EditorTab::textEdited, this, &EditorAreaWidget::fileTextEdited);
+    connect(editor, &EditorTab::cursorMoved, this, &EditorAreaWidget::cursorPositionChanged);
 
     emit currentFilePathChanged(filePath);
     return true;
@@ -93,6 +95,33 @@ bool EditorAreaWidget::saveCurrentFile()
     }
 
     return saved;
+}
+
+void EditorAreaWidget::applyRemoteFileText(const QString &absolutePath, const QString &text)
+{
+    const int index = findTabByFilePath(absolutePath);
+    if (index < 0) {
+        return;
+    }
+    auto *editor = qobject_cast<EditorTab *>(tabs_->widget(index));
+    if (editor == nullptr) {
+        return;
+    }
+    editor->applyRemoteText(text);
+    updateTabTitle(index);
+}
+
+void EditorAreaWidget::showRemoteCursor(const QString &absolutePath, const QString &username, int line, int column)
+{
+    const int index = findTabByFilePath(absolutePath);
+    if (index < 0) {
+        return;
+    }
+    auto *editor = qobject_cast<EditorTab *>(tabs_->widget(index));
+    if (editor == nullptr) {
+        return;
+    }
+    editor->showRemoteActivity(username, line, column);
 }
 
 int EditorAreaWidget::findTabByFilePath(const QString &filePath) const

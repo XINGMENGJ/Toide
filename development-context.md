@@ -13,12 +13,16 @@
 
 ## 当前技术栈
 
-- 客户端：Qt 6.11 + C++20/Qt Widgets（仓库内 `qt6.7-env.cmd` 已为历史文件名，实际加载 **Qt 6.11.0 MinGW 64-bit** 与 **Tools/mingw1310_64**；机器上仍可同时保留旧版 Qt 6.7 安装）。
+- 客户端：Qt 6.11 + C++20/Qt Widgets（当前可用 Kit 为 **E:/QT/QTN/6.11.0/mingw_64**，并已确认含 `Qt6WebSockets`；旧版 Qt 6.7 可保留但不作为协作功能开发 Kit）。
 - 构建：
   - CMake：主自动化构建和测试。
   - qmake：`Toide.pro`，供 Qt Creator 手动打开编译；MinGW 依赖 `CONFIG += c++20` 生成兼容标准参数，MSVC 显式使用 `/std:c++20`。
 - 仓库：GitHub `XINGMENGJ/Toide`。
 - 服务端规划：Drogon + MySQL + Redis，REST 用于业务接口，WebSocket 用于协作事件。
+- 本机 Drogon 已安装在 `C:\Users\fbyf7\local\drogon`；CMake 配置需带 `-DCMAKE_PREFIX_PATH="E:/QT/QTN/6.11.0/mingw_64;C:/Users/fbyf7/local/drogon"`。
+- MySQL 服务为 `MySQL57`，监听 `127.0.0.1:3306`；用户提供 root 密码 `qwewrty`，但本轮用该密码直接登录返回 `ERROR 1045`，需要后续复核真实密码或授权方式。
+- Redis 当前未发现运行中的服务/进程/WSL/Docker；按此前上下文采用 GitHub `tporadowski/redis` Windows 第三方版作为开发依赖。下载较慢时，可先以内存在线状态 fallback 开发，Redis 跑通后再替换持久在线状态。
+- 客户端打包脚本：`scripts/package-client.ps1`，默认把 `build-mingw/client/toide_client.exe` 通过 Qt 6.11 的 `windeployqt` 封装到 `dist/ToideClient/Toide.exe`。
 
 ## 已完成内容
 
@@ -73,7 +77,7 @@
 - Git 状态面板在未解析到分支名时会禁用 `Copy branch`，成功加载分支后再启用。
 - 网络协作主线已启动：后端数据库路线从 PostgreSQL 调整为 MySQL + Redis。
 - 新增 `server/` 后端骨架：包含可测试的 `toide_server_core`、health 响应生成、配置样例和 Drogon 控制器入口。
-- 当前本机未发现 Drogon 包，CMake 会先构建 server core 和测试；安装 Drogon 后会自动构建 `toide_server` 可执行文件。
+- Drogon 已可被 CMake 找到；`toide_server` 目标可以在 MinGW + Qt 6.11 + `C:\Users\fbyf7\local\drogon` 前缀下构建。
 - 安装 Drogon 时，`toide_server` 增加 `CollaborationWsController`：WebSocket 路径正则 `^/ws/projects/([^/]+)$`，握手后发送 `server.welcome`，同项目房间广播 `presence.user_joined` / `presence.user_left`；支持客户端 JSON `heartbeat` → `heartbeat.ack`，以及 `presence.join`、`presence.current_file` 向其他连接转发（用户占位 `anonymous`，`?token=` 校验与真实用户身份待接）。
 - 客户端新增 `NetworkClient`，可请求服务端 `/api/health` 并通过 `healthChecked` 信号报告 Online/Offline 状态。
 - 主窗口右侧协作面板从占位列表升级为 `CollaborationPanelWidget`，提供 `Check server` 按钮并显示服务端连接状态；健康检查请求 `NetworkClient::checkHealth`，URL 为设置中的服务端基址 + `/api/health`。
@@ -102,4 +106,4 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 下一步建议
 
-为 WebSocket 增加 `token` / 项目成员校验、持久化用户身份，并在客户端连接后自动发送 `presence.join` 与文档约定事件（见 `collaborative-dev-platform-development-guide.md` §7）。
+继续把认证从内存 fallback 切到 MySQL 表；Redis 启动后把在线用户、软锁和最近光标状态从内存房间迁移到 Redis key。优先保持 Qt 6.11 MinGW + Drogon 的构建绿色。

@@ -1,5 +1,7 @@
 #include "api/collaboration_ws_controller.h"
 
+#include "auth/auth_service.h"
+
 #include <json/json.h>
 #include <json/writer.h>
 
@@ -19,11 +21,13 @@ namespace {
 struct WsCollabContext {
     std::string projectId;
     std::string clientId;
+    std::string username;
 };
 
 struct RoomMember {
     drogon::WebSocketConnectionPtr conn;
     std::string clientId;
+    std::string username;
     std::string currentFile;
 };
 
@@ -123,11 +127,13 @@ void removeMemberByConn(const std::string &projectId, const drogon::WebSocketCon
 
 void addMember(const std::string &projectId,
                const drogon::WebSocketConnectionPtr &conn,
-               const std::string &clientId)
+               const std::string &clientId,
+               const std::string &username)
 {
     RoomMember m;
     m.conn = conn;
     m.clientId = clientId;
+    m.username = username;
     m.currentFile.clear();
     g_rooms[projectId].push_back(std::move(m));
 }
@@ -143,6 +149,7 @@ std::string rosterSnapshotStringUnderLock(const std::string &projectId)
         for (const auto &m : it->second) {
             Json::Value o;
             o["clientId"] = m.clientId;
+            o["username"] = m.username;
             o["filePath"] = m.currentFile;
             members.append(o);
         }
@@ -151,23 +158,24 @@ std::string rosterSnapshotStringUnderLock(const std::string &projectId)
     return jsonString(root);
 }
 
-std::string welcomePayload(const std::string &projectId, const std::string &clientId)
+std::string welcomePayload(const std::string &projectId, const std::string &clientId, const std::string &username)
 {
     Json::Value root;
     root["type"] = "server.welcome";
     root["projectId"] = projectId;
     root["clientId"] = clientId;
+    root["username"] = username;
     return jsonString(root);
 }
 
-std::string userJoinedPayload(const std::string &projectId, const std::string &clientId)
+std::string userJoinedPayload(const std::string &projectId, const std::string &clientId, const std::string &username)
 {
     Json::Value root;
     root["type"] = "presence.user_joined";
     root["projectId"] = projectId;
     Json::Value user;
     user["id"] = clientId;
-    user["username"] = clientId;
+    user["username"] = username;
     root["user"] = user;
     return jsonString(root);
 }
@@ -220,27 +228,39 @@ void CollaborationWsController::handleNewConnection(const drogon::HttpRequestPtr
         return;
     }
 
+    const std::string token = trimCopy(req->getParameter("token"));
+    const auto authenticated = auth::AuthService::instance().userFromToken(token);
+    if (!authenticated.has_value()) {
+        Json::Value err;
+        err["type"] = "server.error";
+        err["message"] = "Authentication required.";
+        conn->send(jsonString(err));
+        conn->shutdown(drogon::CloseCode::kNormalClosure, "Authentication required.");
+        return;
+    }
     std::string clientId = trimCopy(req->getParameter("clientId"));
     if (clientId.empty()) {
-        clientId = makeGuestClientId();
+        clientId = authenticated->id.empty() ? makeGuestClientId() : authenticated->id;
     }
+    const std::string username = authenticated->username.empty() ? clientId : authenticated->username;
 
     auto state = std::make_shared<WsCollabContext>();
     state->projectId = projectId;
     state->clientId = clientId;
+    state->username = username;
     conn->setContext(state);
 
     std::string rosterJson;
     {
         std::lock_guard<std::mutex> lock(g_roomMutex);
-        addMember(projectId, conn, clientId);
+        addMember(projectId, conn, clientId, username);
         rosterJson = rosterSnapshotStringUnderLock(projectId);
     }
 
-    conn->send(welcomePayload(projectId, clientId));
+    conn->send(welcomePayload(projectId, clientId, username));
     conn->send(rosterJson);
 
-    broadcastToRoom(projectId, conn, userJoinedPayload(projectId, clientId));
+    broadcastToRoom(projectId, conn, userJoinedPayload(projectId, clientId, username));
 }
 
 void CollaborationWsController::handleNewMessage(const drogon::WebSocketConnectionPtr &conn,
@@ -256,6 +276,7 @@ void CollaborationWsController::handleNewMessage(const drogon::WebSocketConnecti
     }
     const std::string &projectId = ctx->projectId;
     const std::string &clientId = ctx->clientId;
+    const std::string &username = ctx->username;
 
     Json::Value in;
     Json::CharReaderBuilder b;
@@ -291,19 +312,34 @@ void CollaborationWsController::handleNewMessage(const drogon::WebSocketConnecti
         changed["type"] = "presence.current_file_changed";
         changed["projectId"] = projectId;
         changed["userId"] = clientId;
+        changed["username"] = username;
         changed["filePath"] = filePath;
         changed["timestamp"] = utcTimestampIso8601z();
         broadcastToRoom(projectId, conn, jsonString(changed));
         return;
     }
 
-    if (msgType == "collab.file_saved") {
-        Json::Value out;
-        out["type"] = "collab.file_saved";
+    if (msgType == "editor.cursor" || msgType == "editor.patch" || msgType == "editor.soft_lock") {
+        Json::Value out = in;
         out["projectId"] = projectId;
         out["clientId"] = clientId;
+        out["username"] = username;
+        out["timestamp"] = utcTimestampIso8601z();
+        broadcastToRoom(projectId, conn, jsonString(out));
+        return;
+    }
+
+    if (msgType == "collab.file_saved") {
+        Json::Value out;
+        out["type"] = "file.updated";
+        out["projectId"] = projectId;
+        out["clientId"] = clientId;
+        out["username"] = username;
         if (in.isMember("filePath") && in["filePath"].isString()) {
             out["filePath"] = in["filePath"].asString();
+        }
+        if (in.isMember("content") && in["content"].isString()) {
+            out["content"] = in["content"].asString();
         }
         out["timestamp"] = utcTimestampIso8601z();
         broadcastToRoom(projectId, conn, jsonString(out));

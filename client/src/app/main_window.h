@@ -22,6 +22,7 @@ private:
     void createActions();
     void createLayout();
     void chooseProjectDirectory();
+    void showLoginDialog();
     void openDefaultWorkspace();
     void openProjectDirectory(const QString &projectPath);
     void openWorkspaceTerminal(const QString &projectPath);

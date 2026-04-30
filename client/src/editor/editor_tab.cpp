@@ -1,6 +1,7 @@
 #include "editor/editor_tab.h"
 
 #include <QFile>
+#include <QLabel>
 #include <QPlainTextEdit>
 #include <QSignalBlocker>
 #include <QTextBlock>
@@ -17,7 +18,9 @@ EditorTab::EditorTab(QWidget *parent)
 
     connect(editor_, &QPlainTextEdit::textChanged, this, [this]() {
         setDirty(true);
+        emit textEdited(filePath_, text());
     });
+    connect(editor_, &QPlainTextEdit::cursorPositionChanged, this, &EditorTab::emitCursorPosition);
 }
 
 QString EditorTab::filePath() const
@@ -72,6 +75,19 @@ void EditorTab::setText(const QString &text)
     editor_->setPlainText(text);
 }
 
+void EditorTab::applyRemoteText(const QString &text)
+{
+    const QSignalBlocker blocker(editor_);
+    editor_->setPlainText(text);
+    setDirty(true);
+}
+
+void EditorTab::showRemoteActivity(const QString &username, int line, int column)
+{
+    editor_->setExtraSelections({});
+    editor_->setToolTip(QStringLiteral("%1 editing near %2:%3").arg(username).arg(line).arg(column));
+}
+
 void EditorTab::moveCursorTo(int line, int column)
 {
     const auto targetLine = qMax(1, line);
@@ -89,6 +105,12 @@ void EditorTab::moveCursorTo(int line, int column)
 
     editor_->setTextCursor(cursor);
     editor_->setFocus();
+}
+
+void EditorTab::emitCursorPosition()
+{
+    const QTextCursor cursor = editor_->textCursor();
+    emit cursorMoved(filePath_, cursor.blockNumber() + 1, cursor.positionInBlock() + 1);
 }
 
 void EditorTab::setDirty(bool dirty)

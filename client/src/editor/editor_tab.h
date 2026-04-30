@@ -18,12 +18,17 @@ public:
     bool save();
     void setText(const QString &text);
     void moveCursorTo(int line, int column);
+    void applyRemoteText(const QString &text);
+    void showRemoteActivity(const QString &username, int line, int column);
 
 signals:
     void dirtyChanged(bool dirty);
+    void textEdited(const QString &filePath, const QString &text);
+    void cursorMoved(const QString &filePath, int line, int column);
 
 private:
     void setDirty(bool dirty);
+    void emitCursorPosition();
 
     QPlainTextEdit *editor_ = nullptr;
     QString filePath_;

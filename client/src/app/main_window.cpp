@@ -110,8 +110,8 @@ void MainWindow::createLayout()
     connect(fileExplorer_, &FileExplorerWidget::fileOpenRequested, editorArea_, &EditorAreaWidget::openFile);
     connect(taskRunner_, &TaskRunnerWidget::diagnosticOpenRequested, editorArea_, &EditorAreaWidget::openFileAt);
     connect(gitStatus_, &GitStatusWidget::openTerminalRequested, this, &MainWindow::openWorkspaceTerminal);
-    connect(collaborationPanel_, &CollaborationPanelWidget::serverHealthCheckRequested, this, [this]() {
-        networkClient_->checkHealth(QUrl(QStringLiteral("http://127.0.0.1:8848")));
+    connect(collaborationPanel_, &CollaborationPanelWidget::serverHealthCheckRequested, this, [this](const QUrl &baseUrl) {
+        networkClient_->checkHealth(baseUrl);
     });
     connect(networkClient_, &NetworkClient::healthChecked, collaborationPanel_, &CollaborationPanelWidget::setServerStatus);
 }

@@ -24,6 +24,8 @@ public slots:
     bool saveCurrentFile();
     void applyRemoteFileText(const QString &absolutePath, const QString &text);
     void showRemoteCursor(const QString &absolutePath, const QString &username, int line, int column);
+    void setServerDocVersionForPath(const QString &absolutePath, qint64 version);
+    [[nodiscard]] qint64 serverDocVersionForPath(const QString &absolutePath) const;
 
 private:
     [[nodiscard]] int findTabByFilePath(const QString &filePath) const;

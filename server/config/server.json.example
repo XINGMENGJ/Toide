@@ -5,6 +5,33 @@
       "port": 8848
     }
   ],
+  "db_clients": [
+    {
+      "name": "default",
+      "rdbms": "mysql",
+      "host": "127.0.0.1",
+      "port": 3306,
+      "dbname": "toide",
+      "user": "toide",
+      "passwd": "",
+      "is_fast": false,
+      "number_of_connections": 2,
+      "client_encoding": "utf8mb4"
+    }
+  ],
+  "redis_clients": [
+    {
+      "name": "default",
+      "host": "127.0.0.1",
+      "port": 6379,
+      "username": "",
+      "password": "",
+      "connection_number": 2,
+      "db": 0,
+      "is_fast": false,
+      "timeout": 2.0
+    }
+  ],
   "app": {
     "number_of_threads": 2
   },

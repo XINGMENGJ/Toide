@@ -139,7 +139,7 @@ void TaskConfigTest::defaultWorkspaceProvidesDiagnosticDemoTaskAndFile()
     const auto workspaceRoot = QStringLiteral(TOIDE_SOURCE_DIR) + QStringLiteral("/examples/default-workspace");
     const auto configPath = workspaceRoot + QStringLiteral("/.toide/tasks.json");
 
-    QVERIFY(QFileInfo::exists(workspaceRoot + QStringLiteral("/src/diagnostic_demo.cpp")));
+    QVERIFY(QFileInfo::exists(workspaceRoot + QStringLiteral("/diagnostics/diagnostic_demo.cpp")));
 
     QString errorMessage;
     const auto config = TaskConfig::loadFromFile(configPath, &errorMessage);

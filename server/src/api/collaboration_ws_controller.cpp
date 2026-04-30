@@ -1,6 +1,7 @@
 #include "api/collaboration_ws_controller.h"
 
 #include "auth/auth_service.h"
+#include "collaboration/redis_collab_store.h"
 
 #include <json/json.h>
 #include <json/writer.h>
@@ -21,18 +22,21 @@ namespace {
 struct WsCollabContext {
     std::string projectId;
     std::string clientId;
+    std::string userId;
     std::string username;
 };
 
 struct RoomMember {
     drogon::WebSocketConnectionPtr conn;
     std::string clientId;
+    std::string userId;
     std::string username;
     std::string currentFile;
 };
 
 std::mutex g_roomMutex;
 std::unordered_map<std::string, std::vector<RoomMember>> g_rooms;
+std::unordered_map<std::string, int> g_userPresenceRefCount;
 
 std::string trimCopy(std::string s)
 {
@@ -93,6 +97,11 @@ std::string jsonString(const Json::Value &v)
     return Json::writeString(b, v);
 }
 
+std::string presenceRefKey(const std::string &projectId, const std::string &userId)
+{
+    return projectId + std::string("\x1e") + userId;
+}
+
 RoomMember *findMember(const std::string &projectId, const drogon::WebSocketConnectionPtr &conn)
 {
     auto it = g_rooms.find(projectId);
@@ -125,14 +134,36 @@ void removeMemberByConn(const std::string &projectId, const drogon::WebSocketCon
     }
 }
 
+void ensureDistinctClientId(const std::string &projectId,
+                            const drogon::WebSocketConnectionPtr &conn,
+                            std::string &clientId)
+{
+    auto &vec = g_rooms[projectId];
+    for (;;) {
+        bool clash = false;
+        for (const auto &m : vec) {
+            if (m.clientId == clientId && m.conn != conn) {
+                clash = true;
+                break;
+            }
+        }
+        if (!clash) {
+            return;
+        }
+        clientId = makeGuestClientId();
+    }
+}
+
 void addMember(const std::string &projectId,
                const drogon::WebSocketConnectionPtr &conn,
                const std::string &clientId,
+               const std::string &userId,
                const std::string &username)
 {
     RoomMember m;
     m.conn = conn;
     m.clientId = clientId;
+    m.userId = userId;
     m.username = username;
     m.currentFile.clear();
     g_rooms[projectId].push_back(std::move(m));
@@ -149,6 +180,7 @@ std::string rosterSnapshotStringUnderLock(const std::string &projectId)
         for (const auto &m : it->second) {
             Json::Value o;
             o["clientId"] = m.clientId;
+            o["userId"] = m.userId;
             o["username"] = m.username;
             o["filePath"] = m.currentFile;
             members.append(o);
@@ -245,17 +277,29 @@ void CollaborationWsController::handleNewConnection(const drogon::HttpRequestPtr
     const std::string username = authenticated->username.empty() ? clientId : authenticated->username;
 
     auto state = std::make_shared<WsCollabContext>();
-    state->projectId = projectId;
-    state->clientId = clientId;
-    state->username = username;
-    conn->setContext(state);
 
     std::string rosterJson;
+    bool shouldAddPresence = false;
     {
         std::lock_guard<std::mutex> lock(g_roomMutex);
-        addMember(projectId, conn, clientId, username);
+        ensureDistinctClientId(projectId, conn, clientId);
+        state->projectId = projectId;
+        state->clientId = clientId;
+        state->userId = authenticated->id;
+        state->username = username;
+        addMember(projectId, conn, clientId, authenticated->id, username);
+        int &refc = g_userPresenceRefCount[presenceRefKey(projectId, authenticated->id)];
+        if (++refc == 1) {
+            shouldAddPresence = true;
+        }
         rosterJson = rosterSnapshotStringUnderLock(projectId);
     }
+    conn->setContext(state);
+
+    if (shouldAddPresence) {
+        collab::redisPresenceUserJoin(projectId, authenticated->id);
+    }
+    collab::redisSessionSet(clientId, authenticated->id, projectId, "", utcTimestampIso8601z());
 
     conn->send(welcomePayload(projectId, clientId, username));
     conn->send(rosterJson);
@@ -276,6 +320,7 @@ void CollaborationWsController::handleNewMessage(const drogon::WebSocketConnecti
     }
     const std::string &projectId = ctx->projectId;
     const std::string &clientId = ctx->clientId;
+    const std::string &userId = ctx->userId;
     const std::string &username = ctx->username;
 
     Json::Value in;
@@ -308,10 +353,12 @@ void CollaborationWsController::handleNewMessage(const drogon::WebSocketConnecti
                 m->currentFile = filePath;
             }
         }
+        collab::redisSessionSet(clientId, userId, projectId, filePath, utcTimestampIso8601z());
         Json::Value changed;
         changed["type"] = "presence.current_file_changed";
         changed["projectId"] = projectId;
-        changed["userId"] = clientId;
+        changed["clientId"] = clientId;
+        changed["userId"] = userId.empty() ? clientId : userId;
         changed["username"] = username;
         changed["filePath"] = filePath;
         changed["timestamp"] = utcTimestampIso8601z();
@@ -325,6 +372,29 @@ void CollaborationWsController::handleNewMessage(const drogon::WebSocketConnecti
         out["clientId"] = clientId;
         out["username"] = username;
         out["timestamp"] = utcTimestampIso8601z();
+        if (msgType == "editor.patch" && out.isMember("content") && out["content"].isString()) {
+            static constexpr std::size_t kMaxPatchChars = 32768;
+            const std::string &body = out["content"].asString();
+            if (body.size() > kMaxPatchChars) {
+                out.removeMember("content");
+                out["contentOmitted"] = true;
+                out["contentLength"] = static_cast<Json::Int64>(body.size());
+            }
+        }
+        const std::string filePath =
+            in.isMember("filePath") && in["filePath"].isString() ? in["filePath"].asString() : std::string{};
+        if (msgType == "editor.cursor" && !userId.empty() && !filePath.empty()) {
+            Json::Value snap;
+            snap["clientId"] = clientId;
+            snap["username"] = username;
+            if (in.isMember("cursor")) {
+                snap["cursor"] = in["cursor"];
+            }
+            collab::redisCursorSet(projectId, filePath, userId, jsonString(snap), 120);
+        }
+        if (msgType == "editor.soft_lock" && !userId.empty() && !filePath.empty()) {
+            collab::redisSoftLockSet(projectId, filePath, userId, jsonString(in), 90);
+        }
         broadcastToRoom(projectId, conn, jsonString(out));
         return;
     }
@@ -337,6 +407,9 @@ void CollaborationWsController::handleNewMessage(const drogon::WebSocketConnecti
         out["username"] = username;
         if (in.isMember("filePath") && in["filePath"].isString()) {
             out["filePath"] = in["filePath"].asString();
+        }
+        if (in.isMember("version")) {
+            out["version"] = in["version"];
         }
         if (in.isMember("content") && in["content"].isString()) {
             out["content"] = in["content"].asString();
@@ -365,9 +438,25 @@ void CollaborationWsController::handleConnectionClosed(const drogon::WebSocketCo
     }
     const std::string projectId = ctx->projectId;
     const std::string clientId = ctx->clientId;
+    const std::string userId = ctx->userId;
+    bool shouldRemovePresence = false;
     {
         std::lock_guard<std::mutex> lock(g_roomMutex);
         removeMemberByConn(projectId, conn);
+        if (!userId.empty()) {
+            const std::string pkey = presenceRefKey(projectId, userId);
+            const auto pr = g_userPresenceRefCount.find(pkey);
+            if (pr != g_userPresenceRefCount.end()) {
+                if (--(pr->second) <= 0) {
+                    g_userPresenceRefCount.erase(pr);
+                    shouldRemovePresence = true;
+                }
+            }
+        }
+    }
+    collab::redisSessionClear(clientId);
+    if (shouldRemovePresence && !userId.empty()) {
+        collab::redisPresenceUserLeave(projectId, userId);
     }
     broadcastToRoom(projectId, conn, userLeftPayload(projectId, clientId));
 }

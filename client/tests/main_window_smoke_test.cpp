@@ -17,7 +17,7 @@ void MainWindowSmokeTest::mainWindowHasExpectedShell()
 {
     MainWindow window;
 
-    QCOMPARE(window.windowTitle(), QStringLiteral("Toide"));
+    QCOMPARE(window.windowTitle(), QStringLiteral("Toide 协作 IDE"));
     QVERIFY(window.findChild<QWidget *>(QStringLiteral("fileExplorerPanel")) != nullptr);
     QVERIFY(window.findChild<QWidget *>(QStringLiteral("editorTabs")) != nullptr);
     QVERIFY(window.findChild<QWidget *>(QStringLiteral("collaborationPanel")) != nullptr);

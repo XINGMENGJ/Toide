@@ -16,13 +16,16 @@ call "%REPO%\qt6.7-env.cmd" || exit /b 1
 call "%REPO%\scripts\toide-server-env.cmd" || exit /b 1
 
 set "EXE="
-if exist "%REPO%\build-server\server\toide_server.exe" set "EXE=%REPO%\build-server\server\toide_server.exe"
-if not defined EXE if exist "%REPO%\build-mingw\server\toide_server.exe" set "EXE=%REPO%\build-mingw\server\toide_server.exe"
+if exist "%REPO%\build-mingw\server\toide_server.exe" set "EXE=%REPO%\build-mingw\server\toide_server.exe"
+if not defined EXE if exist "%REPO%\build-server\server\toide_server.exe" (
+  echo Warning: using legacy build-server output. Prefer scripts\build-toide-server.cmd to rebuild build-mingw.
+  set "EXE=%REPO%\build-server\server\toide_server.exe"
+)
 
 if not defined EXE (
   echo toide_server.exe not found in:
-  echo   build-server\server\
   echo   build-mingw\server\
+  echo   build-server\server\  ^(legacy fallback^)
   echo Build with: scripts\build-toide-server.cmd
   exit /b 1
 )

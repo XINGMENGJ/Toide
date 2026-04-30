@@ -2,6 +2,7 @@
 
 #include "editor/editor_tab.h"
 
+#include <QPlainTextEdit>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 
@@ -11,6 +12,7 @@ class EditorTabTest final : public QObject {
 private slots:
     void loadFileReadsContentAndStartsClean();
     void editingContentMarksTabDirtyAndSavePersists();
+    void remoteActivityHighlightsTargetLine();
 };
 
 void EditorTabTest::loadFileReadsContentAndStartsClean()
@@ -58,6 +60,29 @@ void EditorTabTest::editingContentMarksTabDirtyAndSavePersists()
     QFile savedFile(filePath);
     QVERIFY(savedFile.open(QIODevice::ReadOnly | QIODevice::Text));
     QCOMPARE(QString::fromUtf8(savedFile.readAll()), QStringLiteral("after\n"));
+}
+
+void EditorTabTest::remoteActivityHighlightsTargetLine()
+{
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+
+    const auto filePath = directory.filePath(QStringLiteral("main.cpp"));
+    QFile file(filePath);
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+    file.write("first\nsecond\nthird\n");
+    file.close();
+
+    EditorTab editor;
+    QVERIFY(editor.loadFile(filePath));
+
+    editor.showRemoteActivity(QStringLiteral("alice"), 2, 3);
+
+    auto *textEdit = editor.findChild<QPlainTextEdit *>();
+    QVERIFY(textEdit != nullptr);
+    QCOMPARE(textEdit->extraSelections().size(), 1);
+    QCOMPARE(textEdit->extraSelections().first().cursor.blockNumber(), 1);
+    QVERIFY(textEdit->toolTip().contains(QStringLiteral("alice")));
 }
 
 QTEST_MAIN(EditorTabTest)

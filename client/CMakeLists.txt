@@ -23,6 +23,7 @@ set(TOIDE_CLIENT_CORE_SOURCES
     src/task_runner/task_process_runner.cpp
     src/task_runner/task_runner_widget.cpp
     src/workspace/recent_project_store.cpp
+    src/workspace/workspace_compile_widget.cpp
     src/workspace/workspace_manager.cpp
 )
 
@@ -59,6 +60,15 @@ target_compile_definitions(toide_client_core
         TOIDE_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
 )
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    get_filename_component(_TOIDE_CXX_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    file(TO_CMAKE_PATH "${_TOIDE_CXX_BIN_DIR}" _TOIDE_CXX_BIN_DIR)
+    string(REPLACE "\\" "/" _TOIDE_CXX_BIN_DIR_SLASH "${_TOIDE_CXX_BIN_DIR}")
+    target_compile_definitions(toide_client_core
+        PUBLIC
+            "TOIDE_BUILD_CXX_BIN_DIR=\"${_TOIDE_CXX_BIN_DIR_SLASH}\"")
+endif()
+
 if(MSVC)
     # Qt headers require MSVC to report a standards-conforming __cplusplus value.
     target_compile_options(toide_client_core PUBLIC /Zc:__cplusplus)
@@ -69,6 +79,12 @@ endif()
 
 qt_add_executable(toide_client
     src/main.cpp
+)
+
+qt_add_resources(toide_client toide_changelog
+    PREFIX "/toide"
+    FILES
+        resources/app_changelog.txt
 )
 
 target_link_libraries(toide_client
@@ -116,6 +132,10 @@ add_toide_qt_test(toide_recent_project_store_test
 
 add_toide_qt_test(toide_git_status_widget_test
     tests/git_status_widget_test.cpp
+)
+
+add_toide_qt_test(toide_file_explorer_widget_test
+    tests/file_explorer_widget_test.cpp
 )
 
 add_toide_qt_test(toide_network_client_test

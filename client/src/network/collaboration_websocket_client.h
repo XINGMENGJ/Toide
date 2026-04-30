@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QTimer>
 #include <QUrl>
 #include <memory>
 
@@ -26,6 +27,8 @@ public:
     void sendTextMessage(const QString &message);
 
     bool isConnected() const;
+    bool isReconnectEnabled() const;
+    int reconnectIntervalMs() const;
 
 signals:
     void connected();
@@ -35,6 +38,12 @@ signals:
 
 private:
     void ensureSocket();
+    void scheduleReconnect();
+    void openLastUrl();
 
     std::unique_ptr<QWebSocket> socket_;
+    QTimer reconnectTimer_;
+    QUrl lastUrl_;
+    bool reconnectEnabled_ = false;
+    bool userDisconnectRequested_ = false;
 };

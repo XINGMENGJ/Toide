@@ -23,6 +23,7 @@ private:
 
     QString workspaceRoot_;
     QString currentBranchName_;
+    QLabel *introLabel_ = nullptr;
     QPushButton *refreshButton_ = nullptr;
     QPushButton *copyButton_ = nullptr;
     QPushButton *copyBranchButton_ = nullptr;

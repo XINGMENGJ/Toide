@@ -2,6 +2,8 @@
 
 ## 协作约定
 
+- **持久路线**：服务端数据层以 **MySQL + Redis** 为主；若考虑改为 SQLite/单库-only 等架构方向，**必须先与用户确认**，不得在未确认时自行替换。
+- 本仓库的**开发上下文以本文档为准**：完成与本机构建、依赖路径、Drogon/MySQL 相关的重要变更后，应同步更新本节与「本机 Drogon / MySQL 客户端」段落。
 - 用户说“提交”时，表示本地 `git commit` 后还要 `git push` 到 GitHub。
 - 用户说“可以，继续开发”时，继续下一个小功能前，需要更新本文档，记录当前上下文。
 - `Toide.pro` 是 Qt Creator/qmake 的手动编译入口，可以随代码变化同步维护。
@@ -18,18 +20,25 @@
   - CMake：主自动化构建和测试。
   - qmake：`Toide.pro`，供 Qt Creator 手动打开编译；MinGW 依赖 `CONFIG += c++20` 生成兼容标准参数，MSVC 显式使用 `/std:c++20`。
 - 仓库：GitHub `XINGMENGJ/Toide`。
-- 服务端规划：Drogon + MySQL + Redis，REST 用于业务接口，WebSocket 用于协作事件。
-- 本机 Drogon 已安装在 `C:\Users\fbyf7\local\drogon`；CMake 配置需带 `-DCMAKE_PREFIX_PATH="E:/QT/QTN/6.11.0/mingw_64;C:/Users/fbyf7/local/drogon"`。
-- MySQL 服务为 `MySQL57`，监听 `127.0.0.1:3306`；用户提供 root 密码 `qwewrty`，但本轮用该密码直接登录返回 `ERROR 1045`，需要后续复核真实密码或授权方式。
-- Redis 当前未发现运行中的服务/进程/WSL/Docker；按此前上下文采用 GitHub `tporadowski/redis` Windows 第三方版作为开发依赖。下载较慢时，可先以内存在线状态 fallback 开发，Redis 跑通后再替换持久在线状态。
+- 服务端：`server/config/server.json` 已配置 Drogon `db_clients`（MySQL `toide`）与 `redis_clients`（`default`）。首次注册/登录会在 MySQL 中 `CREATE TABLE IF NOT EXISTS users`（与 `server/migrations/001_users.sql` 一致）；**AuthService** 优先走 MySQL，失败时回退内存用户表。WebSocket 协作在 **Redis 可用** 时写入 `toide:presence:project:*`、`toide:session:{clientId}`、`toide:cursor:...`、`toide:softlock:...`（与开发文档 §5.2 键名语义一致）；Redis/MySQL 不可用时仍仅用内存房间，行为与此前兼容。
+- 本机 Drogon 已安装在 `%USERPROFILE%\local\drogon`（示例：`C:\Users\fbyf7\local\drogon`）。源码与构建目录示例：`%USERPROFILE%\drogon`，MinGW 构建目录 `build-mingw-mysql`。安装 Drogon 时须 **`BUILD_ORM=ON`**、**`BUILD_MYSQL=ON`**、**`BUILD_REDIS=ON`**；若 **`BUILD_ORM=OFF`** 会导致 `DbClientManagerSkipped`、等同于未编进数据库支持。可关 **`BUILD_EXAMPLES`**、**`BUILD_SQLITE`**、**`BUILD_POSTGRESQL`** 以缩短构建；**`BUILD_CTL=OFF`** 可避免 `drogon_ctl` 在 MinGW 下因 Hiredis 传递依赖不完整而链接失败。
+- **MySQL 客户端库**：Oracle MySQL 5.7 自带的 `libmysql` **不含** Drogon 所需的 MariaDB 异步 API（如 `mysql_real_connect_start`）。链接目标应为本地编译的 **[MariaDB Connector/C](https://mariadb.com/kb/en/mariadb-connector-c/)**（安装前缀示例：`%USERPROFILE%\local\mariadb-connector-c`），**仍连接本机 MySQL 5.7 服务**（协议兼容）。本机在 Drogon 源码侧曾调整 `cmake_modules/FindMySQL.cmake`、`cmake_modules/FindHiredis.cmake`（MinGW 下 hiredis 避免强依赖 zstd/curl）；`orm_lib/src/mysql_impl/MysqlConnection.cc` 在 `mysql_init` 后关闭强制 SSL 校验，避免 MariaDB 客户端连 **无 SSL 的 MySQL 5.7** 时报 “SSL is required…”。
+- **Redis 客户端**：hiredis 安装前缀示例：`%USERPROFILE%\local\hiredis`。
+- CMake 配置 `toide_server` 时 `CMAKE_PREFIX_PATH` 除 Qt 与 Drogon 外，建议包含：`mariadb-connector-c`、`hiredis`、`jsoncpp`、`zlib`（与 `scripts\toide-server-env.cmd` 一致）。**运行时 PATH** 需包含 **`%USERPROFILE%\local\mariadb-connector-c\lib\mariadb`**（`libmariadb.dll` 与 `plugin\` 下的认证插件）。
+- **本机快速校验**（2026-04-30）：将上述 `lib\mariadb` 加入 PATH 后启动 `build-mingw\server\toide_server.exe`，`GET http://127.0.0.1:8848/api/health` 返回 `{"status":"ok",...}` 即进程与监听正常；若 MySQL/Redis 仍连不上，以 Drogon 日志与 `server.json` 为准逐项排查。
+- 后端启动脚本：`scripts\build-toide-server.cmd` 和 `scripts\run-backend.cmd` 默认使用 **`build-mingw\server\toide_server.exe`**（Qt 6.11 + MinGW 13 + `C:\Users\fbyf7\local\drogon`）。旧目录 **`build-server\`** 可能是历史 Qt 6.7/MinGW 11 构建，若误运行可能出现 `DbClientManagerSkipped` / “No database is supported by drogon”；除非明确清理重建，否则不要优先使用它。
+- MySQL 服务为 `MySQL57`，监听 `127.0.0.1:3306`；root 管理员密码以本地口令为准（此前文档误记拼写导致 1045）。已用 root 在本机验证可登录；并已建库 `toide`、用户 `toide`@`localhost`（空密码，与 `server/config/server.json` 一致），对 `toide.*` 有全部权限。
+- Redis：`server.json` 已配置 `redis_clients`；本机 **若已启动 Redis**（例如监听 6379），协作状态会写入文档约定前缀的 key；未启动或连接失败时仅使用内存房间，不影响联调。
+- 协作稳定性约定：REST/MySQL 文件版本是保存同步的权威来源；WebSocket `file.updated` 若不含 `content` 只作为活动/版本提示，**不得覆盖远端编辑器内容**。实时 `editor.patch` 仅在消息含 `content` 时应用正文；超大正文会被省略以避免断开。远端 `editor.cursor`/`editor.soft_lock` 会在编辑器中以行高亮和 tooltip 提示占用位置。协作频道会发送 `heartbeat`，意外断开后自动重连，用户手动断开时不自动重连。
 - 客户端打包脚本：`scripts/package-client.ps1`，默认把 `build-mingw/client/toide_client.exe` 通过 Qt 6.11 的 `windeployqt` 封装到 `dist/ToideClient/Toide.exe`。
 
 ## 已完成内容
 
 - 项目规划文档和 AI 开发提示词。
-- Qt 客户端主窗口骨架。
+- Linux 服务端独立部署包：`deploy/linux-server/`（`README.md`、`scripts/*.sh`、顶层 `CMakeLists.txt` 仅构建 server）；Windows 下执行 `deploy/linux-server/pack-for-linux.ps1` 生成 `dist/ToideLinuxServer/` 便于上传服务器。
 - Qt 6.7 qmake 手动构建文件和环境脚本。
 - 本地项目打开和文件树。
+- 文件树支持右键新建文件和新建文件夹；新建文件成功后会立即打开编辑器。
 - 基础编辑器标签页。
 - 当前文件保存动作和 `Ctrl+S`。
 - 最近项目记录。
@@ -46,7 +55,7 @@
 - 默认示例工作区提供 `Build Example` 和 `Run Example` 任务，可演示基础 C++ 编译/运行流程。
 - Tasks 面板在任务自然结束后显示 `Succeeded` 或 `Failed: exit code N`，让编译结果更清晰。
 - 编译诊断解析器可识别 g++ 和 MSVC 风格的 `error` / `warning` / `note` 输出，提取文件、行列号、级别和消息。
-- 默认示例工作区提供 `diagnostic_demo.cpp` 和 `Build Diagnostics Demo` 任务，可故意触发编译错误来验证诊断功能。
+- 默认示例工作区提供 `include/` + `src/` 多文件示例与 `diagnostics/diagnostic_demo.cpp`，以及 `Build Diagnostics Demo` 任务，可故意触发编译错误来验证诊断功能。
 - 默认示例工作区的编译任务会先加载 `qt6.7-env.cmd`，避免程序内 PATH 缺少 `g++` 或调用旧编译器。
 - 默认示例工作区的编译任务不再使用 `if not exist build mkdir build && ...`，避免 `build` 目录已存在时跳过真正的编译命令。
 - `Run Example` 也会加载 `qt6.7-env.cmd`，避免运行示例 exe 时缺少 MinGW 运行库 DLL；如果 `build\\hello_toide.exe` 缺失则提示先运行 `Build Example`。
@@ -100,10 +109,14 @@ Qt Creator 页面编译失败，错误集中在：
 - `QProcess::startCommand()` 改为 Windows 使用 `cmd.exe /C`，非 Windows 使用 `/bin/sh -c`。
 - `Qt::SkipEmptyParts` 在部分 Qt Kit 下不可用，改为 Qt 5 使用 `QString::SkipEmptyParts`、Qt 6 使用 `Qt::SkipEmptyParts`。
 
+- 客户端（2026-05-01）：底栏「编译」页 + 主工具栏可对当前工作区 `include/` 与 `src/` 下的 `.h`/`.c`/`.cpp` 等做本机 `g++`/`gcc` 的 `-fsyntax-only` 语法检查（需 PATH 中可用编译器）；协作面板「在线成员」使用服务端 roster / `presence.current_file_changed` 中的 `username` 显示昵称；主窗口构造末尾调用 `clearAuthSession()`，启动时默认未登录（仍保留服务器地址等设置）；「帮助 → 更新日志」通过 Qt 资源 `:/toide/app_changelog.txt`（源文件 `client/resources/app_changelog.txt`）在程序内展示变更摘要；Git 页补充说明文案与工具栏布局（刷新/终端/复制）更易理解。
+
 ## 当前未提交改动
 
 - 工作区与远程差异请以 `git status` / ` git log origin/main..HEAD` 为准。
 
 ## 下一步建议
 
-继续把认证从内存 fallback 切到 MySQL 表；Redis 启动后把在线用户、软锁和最近光标状态从内存房间迁移到 Redis key。优先保持 Qt 6.11 MinGW + Drogon 的构建绿色。
+认证已可走 MySQL（失败回退内存）；Redis 可用时协作键已写入文档约定前缀。后续以小步迭代为主。若执行 `cmake --install` 时 **误写 `$prefix` 字面量**，可能在仓库根下生成错误目录 **`$prefix\`**，应删除并改用 **`--prefix C:/Users/.../local/...`** 形式。
+
+优先保持 Qt 6.11 MinGW + Drogon（ORM+MySQL+Redis）构建绿色。

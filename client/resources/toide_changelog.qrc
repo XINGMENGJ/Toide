@@ -1,0 +1,5 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource prefix="/toide">
+    <file alias="app_changelog.txt">app_changelog.txt</file>
+</qresource>
+</RCC>

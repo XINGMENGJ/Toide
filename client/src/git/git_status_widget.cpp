@@ -34,11 +34,12 @@ bool copyTextToClipboard(const QString &text)
 
 GitStatusWidget::GitStatusWidget(QWidget *parent)
     : QWidget(parent)
-    , refreshButton_(new QPushButton(QStringLiteral("Refresh"), this))
-    , copyButton_(new QPushButton(QStringLiteral("Copy status"), this))
-    , copyBranchButton_(new QPushButton(QStringLiteral("Copy branch"), this))
-    , openTerminalButton_(new QPushButton(QStringLiteral("Open terminal"), this))
-    , refreshStatusLabel_(new QLabel(QStringLiteral("Not refreshed"), this))
+    , introLabel_(new QLabel(this))
+    , refreshButton_(new QPushButton(QStringLiteral("刷新状态"), this))
+    , copyButton_(new QPushButton(QStringLiteral("复制状态"), this))
+    , copyBranchButton_(new QPushButton(QStringLiteral("复制分支名"), this))
+    , openTerminalButton_(new QPushButton(QStringLiteral("打开终端"), this))
+    , refreshStatusLabel_(new QLabel(QStringLiteral("尚未刷新"), this))
     , statusView_(new QTextEdit(this))
 {
     refreshButton_->setObjectName(QStringLiteral("refreshGitStatusButton"));
@@ -47,11 +48,19 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
     openTerminalButton_->setObjectName(QStringLiteral("openGitTerminalButton"));
     refreshStatusLabel_->setObjectName(QStringLiteral("gitRefreshStatusLabel"));
     statusView_->setObjectName(QStringLiteral("gitStatusView"));
+    introLabel_->setObjectName(QStringLiteral("gitIntroLabel"));
     copyBranchButton_->setEnabled(false);
     statusView_->setReadOnly(true);
 
+    introLabel_->setWordWrap(true);
+    introLabel_->setTextFormat(Qt::RichText);
+    introLabel_->setText(
+        QStringLiteral("<p style='margin:0 0 6px 0'><b>Git</b><br/>"
+                       "<span style='color:#444'>读取当前工作区根目录的仓库状态（命令：<code>git status --short "
+                       "--branch</code>）。打开项目时会自动刷新一次。需要本机已安装 <code>git</code> 且该目录为 Git 仓库。</span></p>"));
+
     auto *toolbarLayout = new QHBoxLayout;
-    toolbarLayout->addWidget(refreshStatusLabel_, 1);
+    toolbarLayout->addWidget(refreshStatusLabel_, 0, Qt::AlignVCenter);
     toolbarLayout->addStretch(1);
     toolbarLayout->addWidget(openTerminalButton_);
     toolbarLayout->addWidget(copyBranchButton_);
@@ -60,6 +69,7 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(4, 4, 4, 4);
+    layout->addWidget(introLabel_);
     layout->addLayout(toolbarLayout);
     layout->addWidget(statusView_, 1);
 
@@ -69,31 +79,31 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
     connect(copyButton_, &QPushButton::clicked, this, [this]() {
         const auto statusText = statusView_->toPlainText();
         if (statusText.isEmpty()) {
-            refreshStatusLabel_->setText(QStringLiteral("No status to copy"));
+            refreshStatusLabel_->setText(QStringLiteral("没有可复制的状态"));
             return;
         }
 
         refreshStatusLabel_->setText(copyTextToClipboard(statusText)
-                                         ? QStringLiteral("Copied status")
-                                         : QStringLiteral("Could not copy status"));
+                                         ? QStringLiteral("已复制状态")
+                                         : QStringLiteral("无法复制状态"));
     });
     connect(copyBranchButton_, &QPushButton::clicked, this, [this]() {
         if (currentBranchName_.isEmpty()) {
-            refreshStatusLabel_->setText(QStringLiteral("No branch to copy"));
+            refreshStatusLabel_->setText(QStringLiteral("没有可复制的分支"));
             return;
         }
 
         refreshStatusLabel_->setText(copyTextToClipboard(currentBranchName_)
-                                         ? QStringLiteral("Copied branch")
-                                         : QStringLiteral("Could not copy branch"));
+                                         ? QStringLiteral("已复制分支名")
+                                         : QStringLiteral("无法复制分支名"));
     });
     connect(openTerminalButton_, &QPushButton::clicked, this, [this]() {
         if (workspaceRoot_.isEmpty()) {
-            refreshStatusLabel_->setText(QStringLiteral("No workspace is open."));
+            refreshStatusLabel_->setText(QStringLiteral("未打开工作区。"));
             return;
         }
 
-        refreshStatusLabel_->setText(QStringLiteral("Opening terminal"));
+        refreshStatusLabel_->setText(QStringLiteral("正在打开终端"));
         emit openTerminalRequested(workspaceRoot_);
     });
 }
@@ -104,8 +114,8 @@ bool GitStatusWidget::loadStatusFromWorkspace(const QString &workspaceRoot)
     currentBranchName_.clear();
     copyBranchButton_->setEnabled(false);
     if (workspaceRoot_.isEmpty()) {
-        refreshStatusLabel_->setText(QStringLiteral("No workspace is open."));
-        statusView_->setPlainText(QStringLiteral("No workspace is open."));
+        refreshStatusLabel_->setText(QStringLiteral("未打开工作区。"));
+        statusView_->setPlainText(QStringLiteral("未打开工作区。"));
         return false;
     }
 
@@ -114,22 +124,22 @@ bool GitStatusWidget::loadStatusFromWorkspace(const QString &workspaceRoot)
     process.start(QStringLiteral("git"), QStringList{QStringLiteral("status"), QStringLiteral("--short"), QStringLiteral("--branch")});
     if (!process.waitForFinished(3000)) {
         process.kill();
-        refreshStatusLabel_->setText(QStringLiteral("Git status timed out."));
-        statusView_->setPlainText(QStringLiteral("Git status timed out."));
+        refreshStatusLabel_->setText(QStringLiteral("git status 超时。"));
+        statusView_->setPlainText(QStringLiteral("git status 超时。"));
         return false;
     }
 
     const auto output = QString::fromLocal8Bit(process.readAllStandardOutput());
     const auto errorOutput = QString::fromLocal8Bit(process.readAllStandardError());
     if (process.exitCode() != 0) {
-        refreshStatusLabel_->setText(QStringLiteral("Not a Git repository."));
-        statusView_->setPlainText(QStringLiteral("Not a Git repository.\n%1").arg(errorOutput.trimmed()));
+        refreshStatusLabel_->setText(QStringLiteral("不是 Git 仓库。"));
+        statusView_->setPlainText(QStringLiteral("不是 Git 仓库。\n%1").arg(errorOutput.trimmed()));
         return false;
     }
 
     currentBranchName_ = parseBranchName(output);
     copyBranchButton_->setEnabled(!currentBranchName_.isEmpty());
-    refreshStatusLabel_->setText(QStringLiteral("Refreshed"));
+    refreshStatusLabel_->setText(QStringLiteral("已刷新"));
     statusView_->setPlainText(formatStatusOutput(output));
     return true;
 }
@@ -200,31 +210,31 @@ QString GitStatusWidget::formatStatusOutput(const QString &statusOutput)
     }
 
     QStringList formatted;
-    formatted.append(QStringLiteral("Branch"));
-    formatted.append(branchLine.isEmpty() ? QStringLiteral("(unknown)") : branchLine);
+    formatted.append(QStringLiteral("分支"));
+    formatted.append(branchLine.isEmpty() ? QStringLiteral("（未知）") : branchLine);
     formatted.append(QString());
 
     if (staged.isEmpty() && unstaged.isEmpty() && untracked.isEmpty()) {
-        formatted.append(QStringLiteral("Working tree clean."));
+        formatted.append(QStringLiteral("工作区干净。"));
         formatted.append(QString());
     } else {
-        formatted.append(QStringLiteral("Summary"));
-        formatted.append(QStringLiteral("Staged: %1").arg(staged.size()));
-        formatted.append(QStringLiteral("Unstaged: %1").arg(unstaged.size()));
-        formatted.append(QStringLiteral("Untracked: %1").arg(untracked.size()));
+        formatted.append(QStringLiteral("摘要"));
+        formatted.append(QStringLiteral("暂存：%1").arg(staged.size()));
+        formatted.append(QStringLiteral("未暂存：%1").arg(unstaged.size()));
+        formatted.append(QStringLiteral("未跟踪：%1").arg(untracked.size()));
         formatted.append(QString());
     }
 
-    formatted.append(QStringLiteral("Staged"));
-    formatted.append(staged.isEmpty() ? QStringLiteral("(none)") : staged.join(QLatin1Char('\n')));
+    formatted.append(QStringLiteral("暂存区"));
+    formatted.append(staged.isEmpty() ? QStringLiteral("（无）") : staged.join(QLatin1Char('\n')));
     formatted.append(QString());
 
-    formatted.append(QStringLiteral("Unstaged"));
-    formatted.append(unstaged.isEmpty() ? QStringLiteral("(none)") : unstaged.join(QLatin1Char('\n')));
+    formatted.append(QStringLiteral("未暂存"));
+    formatted.append(unstaged.isEmpty() ? QStringLiteral("（无）") : unstaged.join(QLatin1Char('\n')));
     formatted.append(QString());
 
-    formatted.append(QStringLiteral("Untracked"));
-    formatted.append(untracked.isEmpty() ? QStringLiteral("(none)") : untracked.join(QLatin1Char('\n')));
+    formatted.append(QStringLiteral("未跟踪"));
+    formatted.append(untracked.isEmpty() ? QStringLiteral("（无）") : untracked.join(QLatin1Char('\n')));
 
     return formatted.join(QLatin1Char('\n'));
 }

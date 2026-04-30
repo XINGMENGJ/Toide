@@ -4,6 +4,8 @@
 #include <QUrlQuery>
 #include <QWebSocket>
 
+#include <QtCore/QtCompilerDetection>
+
 CollaborationWebSocketClient::CollaborationWebSocketClient(QObject *parent)
     : QObject(parent)
 {
@@ -53,9 +55,15 @@ void CollaborationWebSocketClient::ensureSocket()
     connect(socket_.get(), &QWebSocket::connected, this, &CollaborationWebSocketClient::connected);
     connect(socket_.get(), &QWebSocket::disconnected, this, &CollaborationWebSocketClient::disconnected);
     connect(socket_.get(), &QWebSocket::textMessageReceived, this, &CollaborationWebSocketClient::textMessageReceived);
-    connect(socket_.get(), &QWebSocket::errorOccurred, this, [this](QAbstractSocket::SocketError) {
-        emit errorOccurred(socket_->errorString());
-    });
+    QT_WARNING_PUSH
+    QT_WARNING_DISABLE_DEPRECATED
+    connect(socket_.get(),
+            static_cast<void (QWebSocket::*)(QAbstractSocket::SocketError)>(&QWebSocket::error),
+            this,
+            [this](QAbstractSocket::SocketError) {
+                emit errorOccurred(socket_->errorString());
+            });
+    QT_WARNING_POP
 }
 
 void CollaborationWebSocketClient::connectToServer(const QUrl &wsUrl)

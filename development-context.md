@@ -78,7 +78,7 @@
 - 主窗口右侧协作面板从占位列表升级为 `CollaborationPanelWidget`，提供 `Check server` 按钮并显示服务端连接状态；健康检查请求 `NetworkClient::checkHealth`，URL 为设置中的服务端基址 + `/api/health`。
 - 客户端 `ServerEndpointSettings` 将协作服务端基址（默认 `http://127.0.0.1:8848`）持久化到 `QStandardPaths::AppConfigLocation` 下的 `toide-client.ini`（键 `network/serverBaseUrl`）；协作面板提供可编辑行，失焦与点击检查时写回并规范化 URL；单测可用临时 ini 路径隔离。
 - 客户端 CMake 在 MSVC 上对 `toide_client_core` 使用 `/Zc:__cplusplus`，以满足 Qt 头文件对标准宏的要求；若 Qt Kit 与 MSVC 不匹配（例如引用 MinGW 版 Qt 却用 VS 生成器），链接会失败，此时应改用 MinGW + `MinGW Makefiles`（例如配合仓库内 `qt6.7-env.cmd`）或改为 MSVC 对应的 Qt 安装。
-- 协作实时通道：`CollaborationWebSocketClient`（`QWebSocket`）与 `buildCollaborationWebSocketUrl`（HTTP 基址映射为 `ws`/`wss`，路径 `/ws/projects/{id}`，可选 `token` 查询参数），配套 CTest 在本地 `QWebSocketServer` 上做 echo 验证。**当前推荐 Qt 6.11 的 `mingw_64`**：若其中已安装 **Qt WebSockets**（存在 `lib/cmake/Qt6WebSockets`），CMake 会编入该类并运行 `toide_collaboration_websocket_client_test`；仅装 **6.7** 且无 WebSockets 时仍会跳过。qmake 侧用 `qtHaveModule(websockets)` 与之一致。
+- 协作实时通道：`CollaborationWebSocketClient`（`QWebSocket`）与 `buildCollaborationWebSocketUrl`（HTTP 基址映射为 `ws`/`wss`，路径 `/ws/projects/{id}`，可选 `token` 查询参数），配套 CTest 在本地 `QWebSocketServer` 上做 echo 验证。**当前推荐 Qt 6.11 的 `mingw_64`**：若其中已安装 **Qt WebSockets**（存在 `lib/cmake/Qt6WebSockets`），CMake 会编入该类并运行 `toide_collaboration_websocket_client_test`；仅装 **6.7** 且无 WebSockets 时仍会跳过。qmake 侧用 `qtHaveModule(websockets)` 与之一致；**定义 `TOIDE_HAVE_QT_WEBSOCKETS`** 时协作面板含 **Connect / Disconnect collaboration channel**，按当前工作区文件夹名作为 `projectId` 连接；未定义时显示未编入说明并隐藏按钮。
 
 ## 最近一次问题
 
@@ -101,4 +101,4 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 下一步建议
 
-继续实现服务端 Drogon WebSocket 房间与认证（与 `collaborative-dev-platform-development-guide.md` §7 对齐），并把客户端协作面板接入 `CollaborationWebSocketClient`。
+继续实现服务端 Drogon WebSocket 入口（`/ws/projects/:id`）与房间/鉴权，使客户端协作通道能真正握手与广播（见 `collaborative-dev-platform-development-guide.md` §7）。

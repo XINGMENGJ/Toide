@@ -153,6 +153,7 @@ void MainWindow::openProjectDirectory(const QString &projectPath)
     fileExplorer_->setProjectRoot(projectPath);
     taskRunner_->loadTasksFromWorkspace(projectPath);
     gitStatus_->loadStatusFromWorkspace(projectPath);
+    collaborationPanel_->setWorkspaceKey(projectPath);
     statusBar()->showMessage(QStringLiteral("Opened project: %1").arg(projectPath));
 }
 

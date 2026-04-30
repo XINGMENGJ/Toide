@@ -23,6 +23,7 @@ private slots:
     void copyStatusShowsCopiedFeedback();
     void copyStatusWithoutStatusShowsHelpfulFeedback();
     void copyBranchCopiesCurrentBranchToClipboard();
+    void copyBranchIsOnlyEnabledWhenBranchIsAvailable();
     void openTerminalRequestsCurrentWorkspace();
     void openTerminalShowsOpeningFeedback();
     void loadStatusFromNonGitWorkspaceShowsHelpfulMessage();
@@ -269,6 +270,21 @@ void GitStatusWidgetTest::copyBranchCopiesCurrentBranchToClipboard()
     QVERIFY(!QGuiApplication::clipboard()->text().isEmpty());
     QVERIFY(statusText.contains(QGuiApplication::clipboard()->text()));
     QVERIFY(statusLabel->text().contains(QStringLiteral("Copied branch")));
+}
+
+void GitStatusWidgetTest::copyBranchIsOnlyEnabledWhenBranchIsAvailable()
+{
+    GitStatusWidget widget;
+    auto *copyBranchButton = widget.findChild<QPushButton *>(QStringLiteral("copyGitBranchButton"));
+    QVERIFY(copyBranchButton != nullptr);
+    QVERIFY(!copyBranchButton->isEnabled());
+
+    QTemporaryDir workspace;
+    QVERIFY(workspace.isValid());
+    QVERIFY(runGit(workspace.path(), QStringList{QStringLiteral("init")}));
+
+    QVERIFY(widget.loadStatusFromWorkspace(workspace.path()));
+    QVERIFY(copyBranchButton->isEnabled());
 }
 
 void GitStatusWidgetTest::openTerminalRequestsCurrentWorkspace()

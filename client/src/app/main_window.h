@@ -5,8 +5,10 @@
 #include <memory>
 
 class FileExplorerWidget;
+class CollaborationPanelWidget;
 class EditorAreaWidget;
 class GitStatusWidget;
+class NetworkClient;
 class RecentProjectStore;
 class TaskRunnerWidget;
 class WorkspaceManager;
@@ -29,9 +31,11 @@ private:
     QAction *saveAction_ = nullptr;
     QAction *exitAction_ = nullptr;
     std::unique_ptr<RecentProjectStore> recentProjectStore_;
+    NetworkClient *networkClient_ = nullptr;
     WorkspaceManager *workspaceManager_ = nullptr;
     FileExplorerWidget *fileExplorer_ = nullptr;
     EditorAreaWidget *editorArea_ = nullptr;
     GitStatusWidget *gitStatus_ = nullptr;
+    CollaborationPanelWidget *collaborationPanel_ = nullptr;
     TaskRunnerWidget *taskRunner_ = nullptr;
 };

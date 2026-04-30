@@ -1,0 +1,26 @@
+{
+  "listeners": [
+    {
+      "address": "0.0.0.0",
+      "port": 18080
+    }
+  ],
+  "app": {
+    "number_of_threads": 1
+  },
+  "toide": {
+    "mysql": {
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "toide",
+      "user": "toide",
+      "password": ""
+    },
+    "redis": {
+      "host": "127.0.0.1",
+      "port": 6379,
+      "database": 0,
+      "password": ""
+    }
+  }
+}

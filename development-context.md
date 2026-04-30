@@ -18,6 +18,7 @@
   - CMake：主自动化构建和测试。
   - qmake：`Toide.pro`，供 Qt Creator 手动打开编译；MinGW 依赖 `CONFIG += c++20` 生成兼容标准参数，MSVC 显式使用 `/std:c++20`。
 - 仓库：GitHub `XINGMENGJ/Toide`。
+- 服务端规划：Drogon + MySQL + Redis，REST 用于业务接口，WebSocket 用于协作事件。
 
 ## 已完成内容
 
@@ -68,6 +69,13 @@
 - Git 状态解析里的 `QString::split(..., SkipEmptyParts)` 已按 Qt 主版本兼容，避免旧 Kit 下 `Qt::SkipEmptyParts` 不存在导致编译失败。
 - Git 状态面板空状态复制和 `SkipEmptyParts` 兼容修复已提交并推送：`aa6dd71 fix: handle empty git status copy`。
 - Git 状态面板提供 `Copy branch` 按钮，可复制当前分支名，并在 Windows 剪贴板短暂占用时进行短重试。
+- Git 状态面板复制分支名功能已提交并推送：`4fe694b feat: copy git branch name`。
+- Git 状态面板在未解析到分支名时会禁用 `Copy branch`，成功加载分支后再启用。
+- 网络协作主线已启动：后端数据库路线从 PostgreSQL 调整为 MySQL + Redis。
+- 新增 `server/` 后端骨架：包含可测试的 `toide_server_core`、health 响应生成、配置样例和 Drogon 控制器入口。
+- 当前本机未发现 Drogon 包，CMake 会先构建 server core 和测试；安装 Drogon 后会自动构建 `toide_server` 可执行文件。
+- 客户端新增 `NetworkClient`，可请求服务端 `/api/health` 并通过 `healthChecked` 信号报告 Online/Offline 状态。
+- 主窗口右侧协作面板从占位列表升级为 `CollaborationPanelWidget`，提供 `Check server` 按钮并显示服务端连接状态；当前默认连接 `http://127.0.0.1:8848/api/health`。
 
 ## 最近一次问题
 
@@ -86,9 +94,9 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `aa6dd71 fix: handle empty git status copy`。
-- 本轮未提交改动：Git 状态面板复制当前分支名。
+- 已提交并推送 `4fe694b feat: copy git branch name`。
+- 本轮未提交改动：Git 状态面板无分支时禁用复制分支名按钮，加载分支后再启用；后端协作文档切换为 MySQL + Redis；新增 server 骨架和 health API 核心；新增客户端 `NetworkClient` 和协作面板服务端连接状态检查。
 
 ## 下一步建议
 
-下一步可以继续完善 Git 面板的状态摘要和常用操作。
+下一步可以把服务端地址做成客户端设置项，或继续实现 WebSocket 协作连接握手和事件流。

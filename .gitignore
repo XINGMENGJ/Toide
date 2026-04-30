@@ -1,6 +1,7 @@
 # Build outputs
 build/
 build-*/
+CMakeFiles/
 bin/
 debug/
 release/
@@ -18,6 +19,7 @@ ui_*.h
 .idea/
 *.user
 *.user.*
+server/config/server.json
 
 # OS files
 Thumbs.db

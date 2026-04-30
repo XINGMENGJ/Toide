@@ -1,8 +1,10 @@
 #include "app/main_window.h"
 
+#include "collaboration/collaboration_panel_widget.h"
 #include "editor/editor_area_widget.h"
 #include "file_explorer/file_explorer_widget.h"
 #include "git/git_status_widget.h"
+#include "network/network_client.h"
 #include "task_runner/task_runner_widget.h"
 #include "workspace/recent_project_store.h"
 #include "workspace/workspace_manager.h"
@@ -13,7 +15,6 @@
 #include <QFileDialog>
 #include <QLabel>
 #include <QStandardPaths>
-#include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -23,11 +24,13 @@
 #include <QStatusBar>
 #include <QTabWidget>
 #include <QToolBar>
+#include <QUrl>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , recentProjectStore_(std::make_unique<RecentProjectStore>(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
                                                                + QStringLiteral("/recent-projects.ini")))
+    , networkClient_(new NetworkClient(this))
     , workspaceManager_(new WorkspaceManager(this))
 {
     setWindowTitle(QStringLiteral("Toide"));
@@ -76,15 +79,14 @@ void MainWindow::createLayout()
 
     editorArea_ = new EditorAreaWidget(this);
 
-    auto *collaborationPanel = new QListWidget(this);
-    collaborationPanel->setObjectName(QStringLiteral("collaborationPanel"));
-    collaborationPanel->addItem(QStringLiteral("Collaboration events will appear here."));
+    collaborationPanel_ = new CollaborationPanelWidget(this);
+    collaborationPanel_->setObjectName(QStringLiteral("collaborationPanel"));
 
     auto *mainSplitter = new QSplitter(Qt::Horizontal, this);
     mainSplitter->setObjectName(QStringLiteral("mainSplitter"));
     mainSplitter->addWidget(fileExplorer_);
     mainSplitter->addWidget(editorArea_);
-    mainSplitter->addWidget(collaborationPanel);
+    mainSplitter->addWidget(collaborationPanel_);
     mainSplitter->setStretchFactor(0, 1);
     mainSplitter->setStretchFactor(1, 4);
     mainSplitter->setStretchFactor(2, 1);
@@ -108,6 +110,10 @@ void MainWindow::createLayout()
     connect(fileExplorer_, &FileExplorerWidget::fileOpenRequested, editorArea_, &EditorAreaWidget::openFile);
     connect(taskRunner_, &TaskRunnerWidget::diagnosticOpenRequested, editorArea_, &EditorAreaWidget::openFileAt);
     connect(gitStatus_, &GitStatusWidget::openTerminalRequested, this, &MainWindow::openWorkspaceTerminal);
+    connect(collaborationPanel_, &CollaborationPanelWidget::serverHealthCheckRequested, this, [this]() {
+        networkClient_->checkHealth(QUrl(QStringLiteral("http://127.0.0.1:8848")));
+    });
+    connect(networkClient_, &NetworkClient::healthChecked, collaborationPanel_, &CollaborationPanelWidget::setServerStatus);
 }
 
 void MainWindow::chooseProjectDirectory()

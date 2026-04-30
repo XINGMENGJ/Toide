@@ -3,12 +3,18 @@
 #include <QFileInfo>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPushButton>
 #include <QUrl>
 #include <QVBoxLayout>
 
 #ifdef TOIDE_HAVE_QT_WEBSOCKETS
 #include "network/collaboration_websocket_client.h"
+
+#include <QDir>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #endif
 
 CollaborationPanelWidget::CollaborationPanelWidget(QWidget *parent, const QString &endpointSettingsIniPath)
@@ -19,15 +25,27 @@ CollaborationPanelWidget::CollaborationPanelWidget(QWidget *parent, const QStrin
     , checkServerConnectionButton_(new QPushButton(QStringLiteral("Check server"), this))
     , collaborationChannelStatusLabel_(new QLabel(this))
     , collaborationChannelButton_(new QPushButton(QStringLiteral("Connect collaboration channel"), this))
+    , onlineMembersCaption_(new QLabel(QStringLiteral("Online in this project"), this))
+    , onlineMembersList_(new QListWidget(this))
+    , activityCaption_(new QLabel(QStringLiteral("Collaboration activity"), this))
+    , activityList_(new QListWidget(this))
 {
     serverConnectionStatusLabel_->setObjectName(QStringLiteral("serverConnectionStatusLabel"));
     serverBaseUrlEdit_->setObjectName(QStringLiteral("serverBaseUrlLineEdit"));
     checkServerConnectionButton_->setObjectName(QStringLiteral("checkServerConnectionButton"));
     collaborationChannelStatusLabel_->setObjectName(QStringLiteral("collaborationChannelStatusLabel"));
     collaborationChannelButton_->setObjectName(QStringLiteral("collaborationChannelButton"));
+    onlineMembersCaption_->setObjectName(QStringLiteral("collaborationOnlineCaption"));
+    onlineMembersList_->setObjectName(QStringLiteral("collaborationOnlineMembersList"));
+    activityCaption_->setObjectName(QStringLiteral("collaborationActivityCaption"));
+    activityList_->setObjectName(QStringLiteral("collaborationActivityList"));
 
     serverBaseUrlEdit_->setPlaceholderText(ServerEndpointSettings::defaultServerBaseUrl());
     serverBaseUrlEdit_->setText(endpointSettings_.serverBaseUrl());
+
+    onlineMembersList_->setMinimumHeight(96);
+    activityList_->setMinimumHeight(120);
+    activityList_->setAlternatingRowColors(true);
 
 #ifdef TOIDE_HAVE_QT_WEBSOCKETS
     collaborationWsClient_ = new CollaborationWebSocketClient(this);
@@ -36,10 +54,14 @@ CollaborationPanelWidget::CollaborationPanelWidget(QWidget *parent, const QStrin
 
     connect(collaborationWsClient_, &CollaborationWebSocketClient::connected, this, [this]() {
         updateCollaborationChannelUi();
+        sendPresenceJoin();
     });
     connect(collaborationWsClient_, &CollaborationWebSocketClient::disconnected, this, [this]() {
         updateCollaborationChannelUi();
+        clearPresenceUi();
     });
+    connect(collaborationWsClient_, &CollaborationWebSocketClient::textMessageReceived, this,
+            &CollaborationPanelWidget::onWebSocketMessage);
     connect(collaborationWsClient_, &CollaborationWebSocketClient::errorOccurred, this, [this](const QString &message) {
         collaborationChannelStatusLabel_->setText(QStringLiteral("Collaboration channel: error (%1)").arg(message));
         collaborationChannelButton_->setText(QStringLiteral("Connect collaboration channel"));
@@ -50,6 +72,10 @@ CollaborationPanelWidget::CollaborationPanelWidget(QWidget *parent, const QStrin
     collaborationChannelStatusLabel_->setText(
         QStringLiteral("Collaboration channel: unavailable (Qt WebSockets not in this build)"));
     collaborationChannelButton_->setVisible(false);
+    onlineMembersCaption_->setVisible(false);
+    onlineMembersList_->setVisible(false);
+    activityCaption_->setVisible(false);
+    activityList_->setVisible(false);
 #endif
 
     auto *titleLabel = new QLabel(QStringLiteral("Collaboration"), this);
@@ -63,6 +89,10 @@ CollaborationPanelWidget::CollaborationPanelWidget(QWidget *parent, const QStrin
     layout->addWidget(checkServerConnectionButton_);
     layout->addWidget(collaborationChannelStatusLabel_);
     layout->addWidget(collaborationChannelButton_);
+    layout->addWidget(onlineMembersCaption_);
+    layout->addWidget(onlineMembersList_, 2);
+    layout->addWidget(activityCaption_);
+    layout->addWidget(activityList_, 2);
     layout->addStretch(1);
 
     connect(serverBaseUrlEdit_, &QLineEdit::editingFinished, this, [this]() {
@@ -99,6 +129,63 @@ void CollaborationPanelWidget::setWorkspaceKey(const QString &workspacePath)
     collaborationProjectId_ = name.isEmpty() ? QStringLiteral("default") : name;
 }
 
+void CollaborationPanelWidget::setWorkspaceRoot(const QString &absoluteRootPath)
+{
+    if (absoluteRootPath.isEmpty()) {
+        workspaceRootAbsolute_.clear();
+        return;
+    }
+    workspaceRootAbsolute_ = QFileInfo(absoluteRootPath).absoluteFilePath();
+}
+
+void CollaborationPanelWidget::notifyCurrentFile(const QString &absoluteFilePath)
+{
+#ifndef TOIDE_HAVE_QT_WEBSOCKETS
+    Q_UNUSED(absoluteFilePath);
+#else
+    if (collaborationWsClient_ == nullptr || !collaborationWsClient_->isConnected()) {
+        return;
+    }
+    if (localClientId_.isEmpty()) {
+        return;
+    }
+    const QString rel = relativeWorkspacePath(absoluteFilePath);
+    QJsonObject o;
+    o[QStringLiteral("type")] = QStringLiteral("presence.current_file");
+    o[QStringLiteral("clientId")] = localClientId_;
+    o[QStringLiteral("projectId")] = collaborationProjectId_;
+    o[QStringLiteral("filePath")] = rel;
+    collaborationWsClient_->sendTextMessage(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
+
+    CollaboratorPeer selfRow;
+    selfRow.clientId = localClientId_;
+    selfRow.currentFile = rel;
+    remotePeers_.insert(localClientId_, selfRow);
+    rebuildOnlineList();
+#endif
+}
+
+void CollaborationPanelWidget::notifyLocalFileSaved(const QString &absoluteFilePath)
+{
+#ifndef TOIDE_HAVE_QT_WEBSOCKETS
+    Q_UNUSED(absoluteFilePath);
+#else
+    if (collaborationWsClient_ == nullptr || !collaborationWsClient_->isConnected()) {
+        return;
+    }
+    if (localClientId_.isEmpty()) {
+        return;
+    }
+    const QString rel = relativeWorkspacePath(absoluteFilePath);
+    QJsonObject o;
+    o[QStringLiteral("type")] = QStringLiteral("collab.file_saved");
+    o[QStringLiteral("clientId")] = localClientId_;
+    o[QStringLiteral("projectId")] = collaborationProjectId_;
+    o[QStringLiteral("filePath")] = rel;
+    collaborationWsClient_->sendTextMessage(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
+#endif
+}
+
 #ifdef TOIDE_HAVE_QT_WEBSOCKETS
 void CollaborationPanelWidget::updateCollaborationChannelUi()
 {
@@ -106,7 +193,7 @@ void CollaborationPanelWidget::updateCollaborationChannelUi()
     collaborationChannelButton_->setText(
         connected ? QStringLiteral("Disconnect collaboration channel") : QStringLiteral("Connect collaboration channel"));
     collaborationChannelStatusLabel_->setText(connected ? QStringLiteral("Collaboration channel: connected")
-                                                         : QStringLiteral("Collaboration channel: disconnected"));
+                                                        : QStringLiteral("Collaboration channel: disconnected"));
 }
 
 void CollaborationPanelWidget::onCollaborationChannelButtonClicked()
@@ -119,10 +206,11 @@ void CollaborationPanelWidget::onCollaborationChannelButtonClicked()
 
     endpointSettings_.setServerBaseUrl(serverBaseUrlEdit_->text());
     serverBaseUrlEdit_->setText(endpointSettings_.serverBaseUrl());
+    localClientId_ = endpointSettings_.ensureCollaborationClientId();
 
     const QUrl http(endpointSettings_.serverBaseUrl());
-    const QUrl ws =
-        CollaborationWebSocketClient::buildCollaborationWebSocketUrl(http, collaborationProjectId_, QString());
+    const QUrl ws = CollaborationWebSocketClient::buildCollaborationWebSocketUrl(
+        http, collaborationProjectId_, QString(), localClientId_);
 
     if (ws.scheme().isEmpty() || ws.host().isEmpty()) {
         collaborationChannelStatusLabel_->setText(
@@ -132,5 +220,205 @@ void CollaborationPanelWidget::onCollaborationChannelButtonClicked()
 
     collaborationChannelStatusLabel_->setText(QStringLiteral("Collaboration channel: connecting..."));
     collaborationWsClient_->connectToServer(ws);
+}
+
+void CollaborationPanelWidget::sendPresenceJoin()
+{
+    if (localClientId_.isEmpty()) {
+        localClientId_ = endpointSettings_.ensureCollaborationClientId();
+    }
+    QJsonObject o;
+    o[QStringLiteral("type")] = QStringLiteral("presence.join");
+    o[QStringLiteral("clientId")] = localClientId_;
+    o[QStringLiteral("projectId")] = collaborationProjectId_;
+    collaborationWsClient_->sendTextMessage(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
+}
+
+void CollaborationPanelWidget::clearPresenceUi()
+{
+    remotePeers_.clear();
+    onlineMembersList_->clear();
+    appendActivityLine(QStringLiteral("Disconnected from collaboration channel."));
+}
+
+void CollaborationPanelWidget::rebuildOnlineList()
+{
+    onlineMembersList_->clear();
+    for (auto it = remotePeers_.constBegin(); it != remotePeers_.constEnd(); ++it) {
+        const QString &cid = it.key();
+        const CollaboratorPeer &p = it.value();
+        QString line = displayNameForClient(cid);
+        if (cid == localClientId_) {
+            line.append(QStringLiteral(" (you)"));
+        }
+        if (p.currentFile.isEmpty()) {
+            line.append(QStringLiteral(" — "));
+            line.append(QStringLiteral("(no file)"));
+        } else {
+            line.append(QStringLiteral(" — "));
+            line.append(p.currentFile);
+        }
+        onlineMembersList_->addItem(line);
+    }
+    if (remotePeers_.isEmpty()) {
+        onlineMembersList_->addItem(QStringLiteral("(no peers yet)"));
+    }
+}
+
+void CollaborationPanelWidget::appendActivityLine(const QString &line)
+{
+    activityList_->insertItem(0, line);
+    while (activityList_->count() > 80) {
+        delete activityList_->takeItem(activityList_->count() - 1);
+    }
+}
+
+QString CollaborationPanelWidget::relativeWorkspacePath(const QString &absolutePath) const
+{
+    if (absolutePath.isEmpty()) {
+        return {};
+    }
+    if (workspaceRootAbsolute_.isEmpty()) {
+        return QFileInfo(absolutePath).fileName();
+    }
+    QString rel = QDir(workspaceRootAbsolute_).relativeFilePath(absolutePath);
+    if (rel.startsWith(QStringLiteral(".."))) {
+        return QFileInfo(absolutePath).fileName();
+    }
+    return QDir::fromNativeSeparators(rel);
+}
+
+QString CollaborationPanelWidget::displayNameForClient(const QString &clientId) const
+{
+    if (clientId.size() <= 10) {
+        return clientId;
+    }
+    return clientId.left(6) + QStringLiteral("…") + clientId.right(4);
+}
+
+void CollaborationPanelWidget::applyRosterJson(const QJsonObject &obj)
+{
+    remotePeers_.clear();
+    const QJsonArray members = obj.value(QStringLiteral("members")).toArray();
+    for (const QJsonValue &v : members) {
+        if (!v.isObject()) {
+            continue;
+        }
+        const QJsonObject m = v.toObject();
+        const QString id = m.value(QStringLiteral("clientId")).toString();
+        if (id.isEmpty()) {
+            continue;
+        }
+        CollaboratorPeer p;
+        p.clientId = id;
+        p.currentFile = m.value(QStringLiteral("filePath")).toString();
+        remotePeers_.insert(id, p);
+    }
+    rebuildOnlineList();
+    appendActivityLine(QStringLiteral("Roster synced (%1 online).").arg(remotePeers_.size()));
+    emit collaborationRosterSynced();
+}
+
+void CollaborationPanelWidget::applyUserJoined(const QJsonObject &obj)
+{
+    const QJsonObject user = obj.value(QStringLiteral("user")).toObject();
+    QString id = user.value(QStringLiteral("id")).toString();
+    if (id.isEmpty()) {
+        id = obj.value(QStringLiteral("clientId")).toString();
+    }
+    if (id.isEmpty() || id == localClientId_) {
+        rebuildOnlineList();
+        return;
+    }
+    CollaboratorPeer p;
+    p.clientId = id;
+    p.currentFile.clear();
+    remotePeers_.insert(id, p);
+    rebuildOnlineList();
+    appendActivityLine(QStringLiteral("%1 joined").arg(displayNameForClient(id)));
+}
+
+void CollaborationPanelWidget::applyUserLeft(const QJsonObject &obj)
+{
+    const QJsonObject user = obj.value(QStringLiteral("user")).toObject();
+    QString id = user.value(QStringLiteral("id")).toString();
+    if (id.isEmpty()) {
+        id = obj.value(QStringLiteral("clientId")).toString();
+    }
+    if (id.isEmpty()) {
+        return;
+    }
+    remotePeers_.remove(id);
+    rebuildOnlineList();
+    appendActivityLine(QStringLiteral("%1 left").arg(displayNameForClient(id)));
+}
+
+void CollaborationPanelWidget::applyCurrentFileChanged(const QJsonObject &obj)
+{
+    const QString uid = obj.value(QStringLiteral("userId")).toString();
+    if (uid.isEmpty()) {
+        return;
+    }
+    if (!remotePeers_.contains(uid)) {
+        CollaboratorPeer p;
+        p.clientId = uid;
+        p.currentFile = obj.value(QStringLiteral("filePath")).toString();
+        remotePeers_.insert(uid, p);
+    } else {
+        remotePeers_[uid].currentFile = obj.value(QStringLiteral("filePath")).toString();
+    }
+    rebuildOnlineList();
+    const QString fp = obj.value(QStringLiteral("filePath")).toString();
+    appendActivityLine(
+        QStringLiteral("%1 → %2").arg(displayNameForClient(uid), fp.isEmpty() ? QStringLiteral("(cleared)") : fp));
+}
+
+void CollaborationPanelWidget::onWebSocketMessage(const QString &text)
+{
+    QJsonParseError err{};
+    const QJsonDocument doc = QJsonDocument::fromJson(text.toUtf8(), &err);
+    if (err.error != QJsonParseError::NoError || !doc.isObject()) {
+        return;
+    }
+    const QJsonObject o = doc.object();
+    const QString t = o.value(QStringLiteral("type")).toString();
+    if (t == QStringLiteral("server.welcome")) {
+        const QString cid = o.value(QStringLiteral("clientId")).toString();
+        if (!cid.isEmpty()) {
+            localClientId_ = cid;
+        }
+        appendActivityLine(QStringLiteral("Connected (%1).").arg(displayNameForClient(localClientId_)));
+        return;
+    }
+    if (t == QStringLiteral("presence.roster")) {
+        applyRosterJson(o);
+        return;
+    }
+    if (t == QStringLiteral("presence.user_joined")) {
+        applyUserJoined(o);
+        return;
+    }
+    if (t == QStringLiteral("presence.user_left")) {
+        applyUserLeft(o);
+        return;
+    }
+    if (t == QStringLiteral("presence.current_file_changed")) {
+        applyCurrentFileChanged(o);
+        return;
+    }
+    if (t == QStringLiteral("collab.file_saved")) {
+        const QString who = o.value(QStringLiteral("clientId")).toString();
+        const QString fp = o.value(QStringLiteral("filePath")).toString();
+        const QString ts = o.value(QStringLiteral("timestamp")).toString();
+        if (who != localClientId_) {
+            appendActivityLine(
+                QStringLiteral("[%2] %1 saved %3")
+                    .arg(displayNameForClient(who), ts.isEmpty() ? QStringLiteral("?") : ts, fp));
+        }
+        return;
+    }
+    if (t == QStringLiteral("heartbeat.ack")) {
+        return;
+    }
 }
 #endif

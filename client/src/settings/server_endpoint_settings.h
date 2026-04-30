@@ -18,7 +18,8 @@ public:
     QString serverBaseUrl() const;
     void setServerBaseUrl(const QString &url);
 
-private:
+    QString collaborationClientId() const;
+    QString ensureCollaborationClientId();
     static QString normalizeBaseUrl(QString url);
 
     std::unique_ptr<QSettings> settings_;

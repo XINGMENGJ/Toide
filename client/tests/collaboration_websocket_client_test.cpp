@@ -13,6 +13,7 @@ class CollaborationWebSocketClientTest final : public QObject {
 
 private slots:
     void buildUrlMapsHttpToWsWithPath();
+    void buildUrlIncludesClientIdQuery();
     void echoRoundTripOverLocalServer();
 };
 
@@ -30,6 +31,22 @@ void CollaborationWebSocketClientTest::buildUrlMapsHttpToWsWithPath()
         CollaborationWebSocketClient::buildCollaborationWebSocketUrl(http, QStringLiteral("p"), QStringLiteral("tok/1"));
     const QUrlQuery q(httpToken);
     QCOMPARE(q.queryItemValue(QStringLiteral("token")), QStringLiteral("tok/1"));
+}
+
+void CollaborationWebSocketClientTest::buildUrlIncludesClientIdQuery()
+{
+    const QUrl http(QStringLiteral("http://127.0.0.1:8848"));
+    const QUrl ws =
+        CollaborationWebSocketClient::buildCollaborationWebSocketUrl(http, QStringLiteral("proj-a"), QString(), QStringLiteral("cid-1"));
+    QUrlQuery qc(ws);
+    QCOMPARE(qc.queryItemValue(QStringLiteral("clientId")), QStringLiteral("cid-1"));
+    QVERIFY(qc.queryItemValue(QStringLiteral("token")).isEmpty());
+
+    const QUrl both = CollaborationWebSocketClient::buildCollaborationWebSocketUrl(
+        http, QStringLiteral("p"), QStringLiteral("tok"), QStringLiteral("cid-2"));
+    QUrlQuery qb(both);
+    QCOMPARE(qb.queryItemValue(QStringLiteral("token")), QStringLiteral("tok"));
+    QCOMPARE(qb.queryItemValue(QStringLiteral("clientId")), QStringLiteral("cid-2"));
 }
 
 void CollaborationWebSocketClientTest::echoRoundTripOverLocalServer()

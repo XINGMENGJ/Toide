@@ -114,6 +114,11 @@ void MainWindow::createLayout()
         networkClient_->checkHealth(baseUrl);
     });
     connect(networkClient_, &NetworkClient::healthChecked, collaborationPanel_, &CollaborationPanelWidget::setServerStatus);
+    connect(editorArea_, &EditorAreaWidget::currentFilePathChanged, collaborationPanel_, &CollaborationPanelWidget::notifyCurrentFile);
+    connect(editorArea_, &EditorAreaWidget::currentFileSaved, collaborationPanel_, &CollaborationPanelWidget::notifyLocalFileSaved);
+    connect(collaborationPanel_, &CollaborationPanelWidget::collaborationRosterSynced, this, [this]() {
+        collaborationPanel_->notifyCurrentFile(editorArea_->currentFilePath());
+    });
 }
 
 void MainWindow::chooseProjectDirectory()
@@ -154,6 +159,8 @@ void MainWindow::openProjectDirectory(const QString &projectPath)
     taskRunner_->loadTasksFromWorkspace(projectPath);
     gitStatus_->loadStatusFromWorkspace(projectPath);
     collaborationPanel_->setWorkspaceKey(projectPath);
+    collaborationPanel_->setWorkspaceRoot(projectPath);
+    collaborationPanel_->notifyCurrentFile(editorArea_->currentFilePath());
     statusBar()->showMessage(QStringLiteral("Opened project: %1").arg(projectPath));
 }
 

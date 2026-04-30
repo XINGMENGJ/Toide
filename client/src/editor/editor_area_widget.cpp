@@ -21,7 +21,20 @@ EditorAreaWidget::EditorAreaWidget(QWidget *parent)
         QWidget *widget = tabs_->widget(index);
         tabs_->removeTab(index);
         widget->deleteLater();
+        const auto *ed = qobject_cast<EditorTab *>(tabs_->currentWidget());
+        emit currentFilePathChanged(ed != nullptr ? ed->filePath() : QString());
     });
+
+    connect(tabs_, &QTabWidget::currentChanged, this, [this](int) {
+        const auto *ed = qobject_cast<EditorTab *>(tabs_->currentWidget());
+        emit currentFilePathChanged(ed != nullptr ? ed->filePath() : QString());
+    });
+}
+
+QString EditorAreaWidget::currentFilePath() const
+{
+    const auto *ed = qobject_cast<EditorTab *>(tabs_->currentWidget());
+    return ed != nullptr ? ed->filePath() : QString();
 }
 
 bool EditorAreaWidget::openFile(const QString &filePath)
@@ -29,6 +42,7 @@ bool EditorAreaWidget::openFile(const QString &filePath)
     const auto existingIndex = findTabByFilePath(filePath);
     if (existingIndex >= 0) {
         tabs_->setCurrentIndex(existingIndex);
+        emit currentFilePathChanged(filePath);
         return true;
     }
 
@@ -45,6 +59,7 @@ bool EditorAreaWidget::openFile(const QString &filePath)
         updateTabTitle(tabs_->indexOf(editor));
     });
 
+    emit currentFilePathChanged(filePath);
     return true;
 }
 
@@ -60,6 +75,7 @@ bool EditorAreaWidget::openFileAt(const QString &filePath, int line, int column)
     }
 
     editor->moveCursorTo(line, column);
+    emit currentFilePathChanged(filePath);
     return true;
 }
 
@@ -73,6 +89,7 @@ bool EditorAreaWidget::saveCurrentFile()
     const auto saved = editor->save();
     if (saved) {
         updateTabTitle(tabs_->currentIndex());
+        emit currentFileSaved(editor->filePath());
     }
 
     return saved;

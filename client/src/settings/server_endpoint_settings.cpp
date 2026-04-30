@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QUuid>
 #include <QUrl>
 
 ServerEndpointSettings::ServerEndpointSettings(const QString &iniFilePath)
@@ -57,4 +58,21 @@ void ServerEndpointSettings::setServerBaseUrl(const QString &url)
 {
     settings_->setValue(QStringLiteral("network/serverBaseUrl"), normalizeBaseUrl(url));
     settings_->sync();
+}
+
+QString ServerEndpointSettings::collaborationClientId() const
+{
+    return settings_->value(QStringLiteral("collaboration/clientId")).toString().trimmed();
+}
+
+QString ServerEndpointSettings::ensureCollaborationClientId()
+{
+    const QString existing = collaborationClientId();
+    if (!existing.isEmpty()) {
+        return existing;
+    }
+    const QString id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    settings_->setValue(QStringLiteral("collaboration/clientId"), id);
+    settings_->sync();
+    return id;
 }

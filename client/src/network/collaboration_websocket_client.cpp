@@ -18,7 +18,8 @@ CollaborationWebSocketClient::~CollaborationWebSocketClient()
 
 QUrl CollaborationWebSocketClient::buildCollaborationWebSocketUrl(const QUrl &httpBase,
                                                                     const QString &projectId,
-                                                                    const QString &accessToken)
+                                                                    const QString &accessToken,
+                                                                    const QString &clientId)
 {
     if (httpBase.scheme().isEmpty() || httpBase.host().isEmpty()) {
         return {};
@@ -36,12 +37,18 @@ QUrl CollaborationWebSocketClient::buildCollaborationWebSocketUrl(const QUrl &ht
 
     const QByteArray encodedId = QUrl::toPercentEncoding(projectId);
     u.setPath(QStringLiteral("/ws/projects/%1").arg(QString::fromUtf8(encodedId)));
-    u.setQuery(QUrlQuery());
 
+    QUrlQuery q;
     if (!accessToken.isEmpty()) {
-        QUrlQuery q;
         q.addQueryItem(QStringLiteral("token"), accessToken);
+    }
+    if (!clientId.isEmpty()) {
+        q.addQueryItem(QStringLiteral("clientId"), clientId);
+    }
+    if (!q.isEmpty()) {
         u.setQuery(q);
+    } else {
+        u.setQuery(QUrlQuery());
     }
     return u;
 }

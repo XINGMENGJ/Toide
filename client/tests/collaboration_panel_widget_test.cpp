@@ -4,6 +4,7 @@
 
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPushButton>
 #include <QTemporaryDir>
 
@@ -41,6 +42,9 @@ void CollaborationPanelWidgetTest::showsDisconnectedByDefault()
     auto *channelButton = widget.findChild<QPushButton *>(QStringLiteral("collaborationChannelButton"));
     QVERIFY(channelButton != nullptr);
     QVERIFY(!channelButton->isHidden());
+    auto *onlineList = widget.findChild<QListWidget *>(QStringLiteral("collaborationOnlineMembersList"));
+    QVERIFY(onlineList != nullptr);
+    QVERIFY(!onlineList->isHidden());
 #else
     QVERIFY(channelLabel->text().contains(QStringLiteral("unavailable"), Qt::CaseInsensitive));
 #endif

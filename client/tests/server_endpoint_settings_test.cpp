@@ -11,6 +11,7 @@ private slots:
     void defaultUrlIs8848Local();
     void roundTripPersistsNormalizedUrl();
     void invalidInputFallsBackToDefault();
+    void ensureCollaborationClientIdCreatesAndPersists();
 };
 
 void ServerEndpointSettingsTest::defaultUrlIs8848Local()
@@ -45,6 +46,24 @@ void ServerEndpointSettingsTest::invalidInputFallsBackToDefault()
     ServerEndpointSettings settings(dir.filePath(QStringLiteral("bad.ini")));
     settings.setServerBaseUrl(QStringLiteral("not a url at all"));
     QCOMPARE(settings.serverBaseUrl(), ServerEndpointSettings::defaultServerBaseUrl());
+}
+
+void ServerEndpointSettingsTest::ensureCollaborationClientIdCreatesAndPersists()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString path = dir.filePath(QStringLiteral("clientid.ini"));
+    QString first;
+    {
+        ServerEndpointSettings s(path);
+        QVERIFY(s.collaborationClientId().isEmpty());
+        first = s.ensureCollaborationClientId();
+        QVERIFY(!first.isEmpty());
+        QCOMPARE(s.collaborationClientId(), first);
+    }
+    ServerEndpointSettings loaded(path);
+    QCOMPARE(loaded.collaborationClientId(), first);
+    QCOMPARE(loaded.ensureCollaborationClientId(), first);
 }
 
 QTEST_MAIN(ServerEndpointSettingsTest)

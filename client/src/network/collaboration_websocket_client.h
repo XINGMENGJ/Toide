@@ -18,7 +18,8 @@ public:
 
     static QUrl buildCollaborationWebSocketUrl(const QUrl &httpBase,
                                                const QString &projectId,
-                                               const QString &accessToken = {});
+                                               const QString &accessToken = {},
+                                               const QString &clientId = {});
 
     void connectToServer(const QUrl &wsUrl);
     void disconnectFromServer();

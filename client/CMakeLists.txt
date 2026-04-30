@@ -74,6 +74,7 @@ qt_add_executable(toide_client
 target_link_libraries(toide_client
     PRIVATE
         toide_client_core
+        Qt6::Widgets
 )
 
 function(add_toide_qt_test target)
@@ -85,6 +86,7 @@ function(add_toide_qt_test target)
         PRIVATE
             toide_client_core
             Qt6::Test
+            Qt6::Widgets
     )
 
     add_test(NAME ${target} COMMAND ${target})

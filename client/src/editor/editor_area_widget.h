@@ -10,6 +10,12 @@ class EditorAreaWidget final : public QWidget {
 public:
     explicit EditorAreaWidget(QWidget *parent = nullptr);
 
+    [[nodiscard]] QString currentFilePath() const;
+
+signals:
+    void currentFilePathChanged(const QString &absolutePath);
+    void currentFileSaved(const QString &absolutePath);
+
 public slots:
     bool openFile(const QString &filePath);
     bool openFileAt(const QString &filePath, int line, int column);

@@ -6,7 +6,7 @@
 
 **Architecture:** 客户端使用 Qt 6 + C++20 实现 IDE 体验，服务端使用 Drogon 提供 REST 与 WebSocket 能力。MVP 先完成项目工作区、文件编辑、任务运行、Git 基础操作、成员状态、文件版本和协作事件，为后续实时多人编辑预留协议和数据模型。
 
-**Tech Stack:** Qt 6, C++20, CMake, QScintilla, libgit2, Drogon, PostgreSQL, Redis, REST, WebSocket, JSON。
+**Tech Stack:** Qt 6, C++20, CMake, QScintilla, libgit2, Drogon, MySQL, Redis, REST, WebSocket, JSON。
 
 ---
 
@@ -63,7 +63,7 @@ Toide Server
   |-- Collaboration Module
   |-- Git Module
   v
-PostgreSQL + Redis + File Storage
+MySQL + Redis + File Storage
 ```
 
 建议项目代号使用 `Toide`，含义可以理解为 Team-Oriented IDE。
@@ -353,62 +353,70 @@ CREATE TABLE cached_file_versions (
 
 ### 5.2 数据库表
 
-PostgreSQL 初始表：
+MySQL 初始表：
 
 ```sql
 CREATE TABLE users (
-  id UUID PRIMARY KEY,
+  id CHAR(36) PRIMARY KEY,
   username VARCHAR(64) NOT NULL UNIQUE,
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL,
-  last_login_at TIMESTAMPTZ
+  created_at DATETIME(3) NOT NULL,
+  last_login_at DATETIME(3)
 );
 
 CREATE TABLE teams (
-  id UUID PRIMARY KEY,
+  id CHAR(36) PRIMARY KEY,
   name VARCHAR(128) NOT NULL,
-  owner_id UUID NOT NULL REFERENCES users(id),
-  created_at TIMESTAMPTZ NOT NULL
+  owner_id CHAR(36) NOT NULL,
+  created_at DATETIME(3) NOT NULL,
+  CONSTRAINT fk_teams_owner FOREIGN KEY (owner_id) REFERENCES users(id)
 );
 
 CREATE TABLE projects (
-  id UUID PRIMARY KEY,
-  team_id UUID NOT NULL REFERENCES teams(id),
+  id CHAR(36) PRIMARY KEY,
+  team_id CHAR(36) NOT NULL,
   name VARCHAR(128) NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   repository_url TEXT NOT NULL DEFAULT '',
-  workspace_config JSONB NOT NULL DEFAULT '{}'::jsonb,
-  created_at TIMESTAMPTZ NOT NULL
+  workspace_config JSON NOT NULL,
+  created_at DATETIME(3) NOT NULL,
+  CONSTRAINT fk_projects_team FOREIGN KEY (team_id) REFERENCES teams(id)
 );
 
 CREATE TABLE project_members (
-  id UUID PRIMARY KEY,
-  project_id UUID NOT NULL REFERENCES projects(id),
-  user_id UUID NOT NULL REFERENCES users(id),
+  id CHAR(36) PRIMARY KEY,
+  project_id CHAR(36) NOT NULL,
+  user_id CHAR(36) NOT NULL,
   role VARCHAR(32) NOT NULL,
-  joined_at TIMESTAMPTZ NOT NULL,
-  UNIQUE(project_id, user_id)
+  joined_at DATETIME(3) NOT NULL,
+  UNIQUE(project_id, user_id),
+  CONSTRAINT fk_project_members_project FOREIGN KEY (project_id) REFERENCES projects(id),
+  CONSTRAINT fk_project_members_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 CREATE TABLE file_versions (
-  id UUID PRIMARY KEY,
-  project_id UUID NOT NULL REFERENCES projects(id),
+  id CHAR(36) PRIMARY KEY,
+  project_id CHAR(36) NOT NULL,
   file_path TEXT NOT NULL,
   version BIGINT NOT NULL,
   content_hash VARCHAR(128) NOT NULL,
-  updated_by UUID NOT NULL REFERENCES users(id),
-  updated_at TIMESTAMPTZ NOT NULL,
-  UNIQUE(project_id, file_path, version)
+  updated_by CHAR(36) NOT NULL,
+  updated_at DATETIME(3) NOT NULL,
+  UNIQUE(project_id, file_path, version),
+  CONSTRAINT fk_file_versions_project FOREIGN KEY (project_id) REFERENCES projects(id),
+  CONSTRAINT fk_file_versions_user FOREIGN KEY (updated_by) REFERENCES users(id)
 );
 
 CREATE TABLE collaboration_events (
-  id UUID PRIMARY KEY,
-  project_id UUID NOT NULL REFERENCES projects(id),
-  user_id UUID NOT NULL REFERENCES users(id),
+  id CHAR(36) PRIMARY KEY,
+  project_id CHAR(36) NOT NULL,
+  user_id CHAR(36) NOT NULL,
   event_type VARCHAR(64) NOT NULL,
-  payload JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL
+  payload JSON NOT NULL,
+  created_at DATETIME(3) NOT NULL,
+  CONSTRAINT fk_collaboration_events_project FOREIGN KEY (project_id) REFERENCES projects(id),
+  CONSTRAINT fk_collaboration_events_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 ```
 
@@ -421,7 +429,7 @@ CREATE INDEX idx_file_versions_project_path ON file_versions(project_id, file_pa
 CREATE INDEX idx_collaboration_events_project_created ON collaboration_events(project_id, created_at DESC);
 ```
 
-在线状态不建议长期保存在 PostgreSQL，优先放 Redis：
+在线状态不建议长期保存在 MySQL，优先放 Redis：
 
 ```text
 presence:project:{projectId} -> set(userId)
@@ -744,7 +752,7 @@ wss://server.example.com/ws/projects/{projectId}?token={accessToken}
 ### Milestone 5：后端基础服务
 
 - [ ] 创建 Drogon 工程。
-- [ ] 配置 PostgreSQL。
+- [ ] 配置 MySQL。
 - [ ] 创建数据库迁移。
 - [ ] 实现注册和登录。
 - [ ] 实现 Token 认证中间件。

@@ -12,7 +12,7 @@
 项目定位：
 - Toide 是一个 C/S 架构的协作开发 IDE。
 - Client 是 Qt 6 + C++20 桌面客户端。
-- Server 是后端服务，优先考虑 Drogon + PostgreSQL + Redis。
+- Server 是后端服务，优先考虑 Drogon + MySQL + Redis。
 - MVP 目标是项目工作区、文件树、代码编辑、任务运行、Git 基础操作、成员状态、文件版本和 WebSocket 协作事件。
 - 第一版不实现完整多人实时编辑，但必须从架构上预留 projectId、filePath、baseVersion、clientId、CollaborationSession、WebSocket event 等概念。
 
@@ -208,7 +208,7 @@ tasks.json 示例：
 目标：
 - 在 server/ 下创建 Drogon 服务。
 - 提供健康检查接口 GET /api/health。
-- 配置 PostgreSQL 连接参数。
+- 配置 MySQL 和 Redis 连接参数。
 - 预留 auth、team、project、file_version、collaboration、common 模块。
 
 技术要求：

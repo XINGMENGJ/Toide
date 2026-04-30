@@ -1,4 +1,4 @@
-QT += widgets
+QT += network widgets
 
 CONFIG += c++20
 CONFIG -= app_bundle
@@ -13,10 +13,12 @@ DEFINES += TOIDE_SOURCE_DIR=\\\"$$PWD\\\"
 SOURCES += \
     client/src/main.cpp \
     client/src/app/main_window.cpp \
+    client/src/collaboration/collaboration_panel_widget.cpp \
     client/src/editor/editor_area_widget.cpp \
     client/src/editor/editor_tab.cpp \
     client/src/file_explorer/file_explorer_widget.cpp \
     client/src/git/git_status_widget.cpp \
+    client/src/network/network_client.cpp \
     client/src/task_runner/task_config.cpp \
     client/src/task_runner/task_diagnostic_parser.cpp \
     client/src/task_runner/task_execution_request.cpp \
@@ -27,10 +29,12 @@ SOURCES += \
 
 HEADERS += \
     client/src/app/main_window.h \
+    client/src/collaboration/collaboration_panel_widget.h \
     client/src/editor/editor_area_widget.h \
     client/src/editor/editor_tab.h \
     client/src/file_explorer/file_explorer_widget.h \
     client/src/git/git_status_widget.h \
+    client/src/network/network_client.h \
     client/src/task_runner/task_config.h \
     client/src/task_runner/task_diagnostic_parser.h \
     client/src/task_runner/task_execution_request.h \

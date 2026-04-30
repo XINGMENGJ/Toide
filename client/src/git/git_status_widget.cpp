@@ -47,6 +47,7 @@ GitStatusWidget::GitStatusWidget(QWidget *parent)
     openTerminalButton_->setObjectName(QStringLiteral("openGitTerminalButton"));
     refreshStatusLabel_->setObjectName(QStringLiteral("gitRefreshStatusLabel"));
     statusView_->setObjectName(QStringLiteral("gitStatusView"));
+    copyBranchButton_->setEnabled(false);
     statusView_->setReadOnly(true);
 
     auto *toolbarLayout = new QHBoxLayout;
@@ -101,6 +102,7 @@ bool GitStatusWidget::loadStatusFromWorkspace(const QString &workspaceRoot)
 {
     workspaceRoot_ = workspaceRoot;
     currentBranchName_.clear();
+    copyBranchButton_->setEnabled(false);
     if (workspaceRoot_.isEmpty()) {
         refreshStatusLabel_->setText(QStringLiteral("No workspace is open."));
         statusView_->setPlainText(QStringLiteral("No workspace is open."));
@@ -126,6 +128,7 @@ bool GitStatusWidget::loadStatusFromWorkspace(const QString &workspaceRoot)
     }
 
     currentBranchName_ = parseBranchName(output);
+    copyBranchButton_->setEnabled(!currentBranchName_.isEmpty());
     refreshStatusLabel_->setText(QStringLiteral("Refreshed"));
     statusView_->setPlainText(formatStatusOutput(output));
     return true;

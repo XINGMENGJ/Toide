@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets Test)
+find_package(Qt6 REQUIRED COMPONENTS Network Widgets Test)
 
 qt_standard_project_setup()
 
@@ -10,10 +10,12 @@ set(CMAKE_AUTORCC ON)
 
 add_library(toide_client_core STATIC
     src/app/main_window.cpp
+    src/collaboration/collaboration_panel_widget.cpp
     src/editor/editor_area_widget.cpp
     src/editor/editor_tab.cpp
     src/file_explorer/file_explorer_widget.cpp
     src/git/git_status_widget.cpp
+    src/network/network_client.cpp
     src/task_runner/task_config.cpp
     src/task_runner/task_diagnostic_parser.cpp
     src/task_runner/task_execution_request.cpp
@@ -30,6 +32,7 @@ target_include_directories(toide_client_core
 
 target_link_libraries(toide_client_core
     PUBLIC
+        Qt6::Network
         Qt6::Widgets
 )
 
@@ -92,6 +95,14 @@ add_toide_qt_test(toide_recent_project_store_test
 
 add_toide_qt_test(toide_git_status_widget_test
     tests/git_status_widget_test.cpp
+)
+
+add_toide_qt_test(toide_network_client_test
+    tests/network_client_test.cpp
+)
+
+add_toide_qt_test(toide_collaboration_panel_widget_test
+    tests/collaboration_panel_widget_test.cpp
 )
 
 add_toide_qt_test(toide_task_config_test

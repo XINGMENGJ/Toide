@@ -155,7 +155,7 @@ C++ 后端可选：
 
 后端基础设施：
 
-- PostgreSQL：保存用户、项目、权限、文件版本、操作日志。
+- MySQL：保存用户、项目、权限、文件版本、操作日志。
 - Redis：保存在线状态、临时会话、WebSocket 节点状态。
 - 本地磁盘或 MinIO：保存项目文件快照、附件、构建产物。
 - Nginx：反向代理和 HTTPS。
@@ -198,7 +198,7 @@ Backend Server
   |-- Collaboration Service
   |-- Git Service
   v
-PostgreSQL / Redis / File Storage
+MySQL / Redis / File Storage
 ```
 
 ### 5.2 客户端模块
@@ -366,7 +366,7 @@ C++ 后端性能好，但开发效率和生态不如 Go、Node.js、Python。由
 
 - 架构：C/S 架构。
 - 客户端：Qt 6 + C++20 + Qt Widgets。
-- 后端：Drogon + PostgreSQL + Redis。
+- 后端：Drogon + MySQL + Redis。
 - 通信：REST + WebSocket。
 - MVP：项目工作区、代码编辑、任务运行、Git 基础、成员列表、文件版本、协作事件。
 - 多人协作：从第一版规划数据模型和协议，先做半实时协作，再做实时协作编辑。

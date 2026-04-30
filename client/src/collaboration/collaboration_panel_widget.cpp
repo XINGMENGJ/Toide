@@ -42,6 +42,8 @@ CollaborationPanelWidget::CollaborationPanelWidget(QWidget *parent, const QStrin
 
     serverBaseUrlEdit_->setPlaceholderText(ServerEndpointSettings::defaultServerBaseUrl());
     serverBaseUrlEdit_->setText(endpointSettings_.serverBaseUrl());
+    authToken_ = endpointSettings_.authToken();
+    username_ = endpointSettings_.username();
 
     onlineMembersList_->setMinimumHeight(96);
     activityList_->setMinimumHeight(120);
@@ -186,6 +188,60 @@ void CollaborationPanelWidget::notifyLocalFileSaved(const QString &absoluteFileP
 #endif
 }
 
+void CollaborationPanelWidget::setAuthSession(const QString &token, const QString &username)
+{
+#ifdef TOIDE_HAVE_QT_WEBSOCKETS
+    authToken_ = token;
+    username_ = username;
+    endpointSettings_.setAuthSession(token, username);
+#else
+    Q_UNUSED(token);
+    Q_UNUSED(username);
+#endif
+}
+
+void CollaborationPanelWidget::notifyLocalTextEdited(const QString &absoluteFilePath, const QString &text)
+{
+#ifndef TOIDE_HAVE_QT_WEBSOCKETS
+    Q_UNUSED(absoluteFilePath);
+    Q_UNUSED(text);
+#else
+    if (collaborationWsClient_ == nullptr || !collaborationWsClient_->isConnected() || localClientId_.isEmpty()) {
+        return;
+    }
+    QJsonObject o;
+    o[QStringLiteral("type")] = QStringLiteral("editor.patch");
+    o[QStringLiteral("clientId")] = localClientId_;
+    o[QStringLiteral("projectId")] = collaborationProjectId_;
+    o[QStringLiteral("filePath")] = relativeWorkspacePath(absoluteFilePath);
+    o[QStringLiteral("content")] = text;
+    collaborationWsClient_->sendTextMessage(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
+#endif
+}
+
+void CollaborationPanelWidget::notifyLocalCursorMoved(const QString &absoluteFilePath, int line, int column)
+{
+#ifndef TOIDE_HAVE_QT_WEBSOCKETS
+    Q_UNUSED(absoluteFilePath);
+    Q_UNUSED(line);
+    Q_UNUSED(column);
+#else
+    if (collaborationWsClient_ == nullptr || !collaborationWsClient_->isConnected() || localClientId_.isEmpty()) {
+        return;
+    }
+    QJsonObject cursor;
+    cursor[QStringLiteral("line")] = line;
+    cursor[QStringLiteral("column")] = column;
+    QJsonObject o;
+    o[QStringLiteral("type")] = QStringLiteral("editor.cursor");
+    o[QStringLiteral("clientId")] = localClientId_;
+    o[QStringLiteral("projectId")] = collaborationProjectId_;
+    o[QStringLiteral("filePath")] = relativeWorkspacePath(absoluteFilePath);
+    o[QStringLiteral("cursor")] = cursor;
+    collaborationWsClient_->sendTextMessage(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
+#endif
+}
+
 #ifdef TOIDE_HAVE_QT_WEBSOCKETS
 void CollaborationPanelWidget::updateCollaborationChannelUi()
 {
@@ -210,7 +266,7 @@ void CollaborationPanelWidget::onCollaborationChannelButtonClicked()
 
     const QUrl http(endpointSettings_.serverBaseUrl());
     const QUrl ws = CollaborationWebSocketClient::buildCollaborationWebSocketUrl(
-        http, collaborationProjectId_, QString(), localClientId_);
+        http, collaborationProjectId_, authToken_, localClientId_);
 
     if (ws.scheme().isEmpty() || ws.host().isEmpty()) {
         collaborationChannelStatusLabel_->setText(
@@ -415,6 +471,31 @@ void CollaborationPanelWidget::onWebSocketMessage(const QString &text)
                 QStringLiteral("[%2] %1 saved %3")
                     .arg(displayNameForClient(who), ts.isEmpty() ? QStringLiteral("?") : ts, fp));
         }
+        return;
+    }
+    if (t == QStringLiteral("file.updated") || t == QStringLiteral("editor.patch")) {
+        const QString who = o.value(QStringLiteral("clientId")).toString();
+        if (who == localClientId_) {
+            return;
+        }
+        const QString fp = o.value(QStringLiteral("filePath")).toString();
+        const QString content = o.value(QStringLiteral("content")).toString();
+        appendActivityLine(QStringLiteral("%1 updated %2").arg(displayNameForClient(who), fp));
+        emit remoteFileUpdated(QDir(workspaceRootAbsolute_).filePath(fp), content);
+        return;
+    }
+    if (t == QStringLiteral("editor.cursor") || t == QStringLiteral("editor.soft_lock")) {
+        const QString who = o.value(QStringLiteral("clientId")).toString();
+        if (who == localClientId_) {
+            return;
+        }
+        const QString name = o.value(QStringLiteral("username")).toString(displayNameForClient(who));
+        const QString fp = o.value(QStringLiteral("filePath")).toString();
+        const QJsonObject cursor = o.value(QStringLiteral("cursor")).toObject();
+        const int line = cursor.value(QStringLiteral("line")).toInt(1);
+        const int column = cursor.value(QStringLiteral("column")).toInt(1);
+        appendActivityLine(QStringLiteral("%1 editing %2:%3").arg(name).arg(line).arg(column));
+        emit remoteCursorMoved(QDir(workspaceRootAbsolute_).filePath(fp), name, line, column);
         return;
     }
     if (t == QStringLiteral("heartbeat.ack")) {

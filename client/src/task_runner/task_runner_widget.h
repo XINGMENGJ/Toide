@@ -8,6 +8,7 @@
 
 class QComboBox;
 class QLabel;
+class QLineEdit;
 class QPushButton;
 class QTextBrowser;
 
@@ -34,6 +35,8 @@ private:
     QPushButton *runButton_ = nullptr;
     QPushButton *stopButton_ = nullptr;
     QLabel *statusLabel_ = nullptr;
+    QLineEdit *terminalCommandEdit_ = nullptr;
+    QPushButton *terminalRunButton_ = nullptr;
     QTextBrowser *outputView_ = nullptr;
     TaskConfig taskConfig_;
     QString workspaceRoot_;

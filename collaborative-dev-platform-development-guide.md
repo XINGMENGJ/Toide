@@ -4,7 +4,7 @@
 
 **Goal:** 构建一个以 Qt 桌面客户端为主、后端服务协调的 C/S 协作开发 IDE 平台。
 
-**Architecture:** 客户端使用 Qt 6 + C++20 实现 IDE 体验，服务端使用 Drogon 提供 REST 与 WebSocket 能力。MVP 先完成项目工作区、文件编辑、任务运行、Git 基础操作、成员状态、文件版本和协作事件，为后续实时多人编辑预留协议和数据模型。
+**Architecture:** 客户端使用 Qt 6.11 + C++20 实现 IDE 体验，服务端使用 Drogon 提供 REST 与 WebSocket 能力。MVP 先完成项目工作区、文件编辑、任务运行、Git 基础操作、登录、成员状态、文件版本、实时光标/选区、简单文本 patch 和协作事件，冲突合并先采用简单策略，后续再升级 OT/CRDT。
 
 **Tech Stack:** Qt 6, C++20, CMake, QScintilla, libgit2, Drogon, MySQL, Redis, REST, WebSocket, JSON。
 
@@ -32,7 +32,7 @@
 
 不在第一版完成：
 
-- 完整实时多人同屏编辑。
+- OT/CRDT 级别的完整多人无冲突合并。
 - 插件市场。
 - 远程容器开发。
 - 复杂 CI/CD。
@@ -351,6 +351,23 @@ CREATE TABLE cached_file_versions (
 - 性能足够好。
 - C++ 项目一致性较强。
 
+当前 Windows 开发环境约定：
+
+- Qt Kit 使用 `E:/QT/QTN/6.11.0/mingw_64`，该 Kit 已确认包含 `Qt6WebSockets`。
+- Drogon 本地安装前缀为 `C:\Users\fbyf7\local\drogon`。
+- CMake 配置示例：
+
+```powershell
+cmake -S . -B build-mingw -G "MinGW Makefiles" -DCMAKE_PREFIX_PATH="E:/QT/QTN/6.11.0/mingw_64;C:/Users/fbyf7/local/drogon"
+cmake --build build-mingw -j 4
+```
+
+MySQL/Redis 开发约定：
+
+- MySQL 使用本机 `MySQL57`，监听 `127.0.0.1:3306`。
+- 数据库配置优先使用环境变量，缺省时读 `server/config/server.json`。
+- Redis 使用 GitHub `tporadowski/redis` Windows 第三方版；Redis 未启动时，服务端允许使用内存房间作为开发期 fallback，但生产协作状态应迁移到 Redis。
+
 ### 5.2 数据库表
 
 MySQL 初始表：
@@ -434,6 +451,8 @@ CREATE INDEX idx_collaboration_events_project_created ON collaboration_events(pr
 ```text
 presence:project:{projectId} -> set(userId)
 session:{clientId} -> userId, projectId, currentFile, lastSeenAt
+cursor:project:{projectId}:{filePath}:{userId} -> line, column, selection, updatedAt
+softlock:project:{projectId}:{filePath}:{range} -> userId, expiresAt
 ```
 
 ## 6. API 设计
@@ -796,6 +815,9 @@ wss://server.example.com/ws/projects/{projectId}?token={accessToken}
 - [ ] 客户端连接项目 WebSocket。
 - [ ] 实现在线成员列表。
 - [ ] 保存文件后广播 `file.updated`。
+- [ ] 光标/选区广播 `editor.cursor`。
+- [ ] 简单文本变更广播 `editor.patch`。
+- [ ] 软锁广播 `editor.soft_lock`。
 - [ ] 客户端协作面板显示事件。
 
 验收标准：

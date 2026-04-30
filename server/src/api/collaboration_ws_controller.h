@@ -16,7 +16,7 @@ public:
     void handleConnectionClosed(const drogon::WebSocketConnectionPtr &conn) override;
 
     WS_PATH_LIST_BEGIN
-    WS_ADD_PATH_VIA_REGEX("^/ws/projects/([^/]+)$")
+    WS_ADD_PATH_VIA_REGEX("^/ws/projects/([^/]+)$");
     WS_PATH_LIST_END
 };
 

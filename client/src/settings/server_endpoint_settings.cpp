@@ -76,3 +76,27 @@ QString ServerEndpointSettings::ensureCollaborationClientId()
     settings_->sync();
     return id;
 }
+
+QString ServerEndpointSettings::authToken() const
+{
+    return settings_->value(QStringLiteral("auth/token")).toString().trimmed();
+}
+
+QString ServerEndpointSettings::username() const
+{
+    return settings_->value(QStringLiteral("auth/username")).toString().trimmed();
+}
+
+void ServerEndpointSettings::setAuthSession(const QString &token, const QString &username)
+{
+    settings_->setValue(QStringLiteral("auth/token"), token.trimmed());
+    settings_->setValue(QStringLiteral("auth/username"), username.trimmed());
+    settings_->sync();
+}
+
+void ServerEndpointSettings::clearAuthSession()
+{
+    settings_->remove(QStringLiteral("auth/token"));
+    settings_->remove(QStringLiteral("auth/username"));
+    settings_->sync();
+}

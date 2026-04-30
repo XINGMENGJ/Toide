@@ -8,12 +8,17 @@
 #include "task_runner/task_runner_widget.h"
 #include "workspace/recent_project_store.h"
 #include "workspace/workspace_manager.h"
+#include "settings/server_endpoint_settings.h"
 
 #include <QAction>
+#include <QDialog>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileDialog>
+#include <QFormLayout>
 #include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
 #include <QStandardPaths>
 #include <QMenu>
 #include <QMenuBar>
@@ -55,6 +60,10 @@ void MainWindow::createActions()
     openProjectAction_ = fileMenu->addAction(QStringLiteral("&Open Project"));
     openProjectAction_->setObjectName(QStringLiteral("openProjectAction"));
     connect(openProjectAction_, &QAction::triggered, this, &MainWindow::chooseProjectDirectory);
+
+    auto *loginAction = fileMenu->addAction(QStringLiteral("&Login / Register"));
+    loginAction->setObjectName(QStringLiteral("loginAction"));
+    connect(loginAction, &QAction::triggered, this, &MainWindow::showLoginDialog);
 
     saveAction_ = fileMenu->addAction(QStringLiteral("&Save"));
     saveAction_->setObjectName(QStringLiteral("saveAction"));
@@ -114,8 +123,20 @@ void MainWindow::createLayout()
         networkClient_->checkHealth(baseUrl);
     });
     connect(networkClient_, &NetworkClient::healthChecked, collaborationPanel_, &CollaborationPanelWidget::setServerStatus);
+    connect(networkClient_, &NetworkClient::authFinished, this, [this](bool ok, const QString &message, const QString &token, const QString &username) {
+        if (!ok) {
+            QMessageBox::warning(this, QStringLiteral("Login Failed"), message);
+            return;
+        }
+        collaborationPanel_->setAuthSession(token, username);
+        statusBar()->showMessage(QStringLiteral("Logged in as %1").arg(username), 3000);
+    });
     connect(editorArea_, &EditorAreaWidget::currentFilePathChanged, collaborationPanel_, &CollaborationPanelWidget::notifyCurrentFile);
     connect(editorArea_, &EditorAreaWidget::currentFileSaved, collaborationPanel_, &CollaborationPanelWidget::notifyLocalFileSaved);
+    connect(editorArea_, &EditorAreaWidget::fileTextEdited, collaborationPanel_, &CollaborationPanelWidget::notifyLocalTextEdited);
+    connect(editorArea_, &EditorAreaWidget::cursorPositionChanged, collaborationPanel_, &CollaborationPanelWidget::notifyLocalCursorMoved);
+    connect(collaborationPanel_, &CollaborationPanelWidget::remoteFileUpdated, editorArea_, &EditorAreaWidget::applyRemoteFileText);
+    connect(collaborationPanel_, &CollaborationPanelWidget::remoteCursorMoved, editorArea_, &EditorAreaWidget::showRemoteCursor);
     connect(collaborationPanel_, &CollaborationPanelWidget::collaborationRosterSynced, this, [this]() {
         collaborationPanel_->notifyCurrentFile(editorArea_->currentFilePath());
     });
@@ -131,6 +152,51 @@ void MainWindow::chooseProjectDirectory()
     if (!selectedDirectory.isEmpty()) {
         workspaceManager_->openProject(selectedDirectory);
     }
+}
+
+void MainWindow::showLoginDialog()
+{
+    ServerEndpointSettings settings;
+    QDialog dialog(this);
+    dialog.setWindowTitle(QStringLiteral("Login to Toide Collaboration"));
+
+    auto *urlEdit = new QLineEdit(settings.serverBaseUrl(), &dialog);
+    auto *userEdit = new QLineEdit(settings.username(), &dialog);
+    auto *passwordEdit = new QLineEdit(&dialog);
+    passwordEdit->setEchoMode(QLineEdit::Password);
+
+    auto *form = new QFormLayout(&dialog);
+    form->addRow(QStringLiteral("Server:"), urlEdit);
+    form->addRow(QStringLiteral("Username:"), userEdit);
+    form->addRow(QStringLiteral("Password:"), passwordEdit);
+
+    auto *buttons = new QHBoxLayout;
+    auto *loginButton = new QPushButton(QStringLiteral("Login"), &dialog);
+    auto *registerButton = new QPushButton(QStringLiteral("Register"), &dialog);
+    buttons->addStretch(1);
+    buttons->addWidget(registerButton);
+    buttons->addWidget(loginButton);
+    form->addRow(buttons);
+
+    auto submit = [this, &dialog, urlEdit, userEdit, passwordEdit](bool registerUser) {
+        ServerEndpointSettings settings;
+        settings.setServerBaseUrl(urlEdit->text());
+        const QUrl server(settings.serverBaseUrl());
+        if (registerUser) {
+            networkClient_->registerUser(server, userEdit->text(), passwordEdit->text());
+        } else {
+            networkClient_->login(server, userEdit->text(), passwordEdit->text());
+        }
+        dialog.accept();
+    };
+    connect(loginButton, &QPushButton::clicked, &dialog, [submit]() {
+        submit(false);
+    });
+    connect(registerButton, &QPushButton::clicked, &dialog, [submit]() {
+        submit(true);
+    });
+
+    dialog.exec();
 }
 
 void MainWindow::openDefaultWorkspace()

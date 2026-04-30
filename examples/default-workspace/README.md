@@ -9,7 +9,7 @@
 - 保存文件：修改文件后使用 `Ctrl+S` 或工具栏 Save。
 - 底部 Tasks 面板：读取 `.toide/tasks.json` 并显示可运行任务。
 - 任务输出：点击 Run 后可在输出区域看到命令输出。
-- 示例编译：选择 `Build Example` 会先加载仓库里的 Qt 6.7 MinGW 环境，再用 `g++` 编译 `src/hello_toide.cpp`。
+- 示例编译：选择 `Build Example` 会先加载仓库里的 Qt 6.11 MinGW 环境，再用 `g++` 编译 `src/hello_toide.cpp`。
 - 诊断验证：选择 `Build Diagnostics Demo` 会故意编译失败，用来观察编译错误输出。
 
 ## 建议操作
@@ -22,7 +22,7 @@
 6. 选择 `Run Example` 并点击 Run，查看程序输出。
 7. 选择 `Build Diagnostics Demo` 并点击 Run，查看 `src/diagnostic_demo.cpp` 的错误输出。
 
-`Run Example` 也会加载同一个 Qt 6.7 MinGW 环境，避免运行时找不到 MinGW 运行库 DLL。如果它提示缺少 `build\\hello_toide.exe`，说明编译没有成功完成，请先查看 `Build Example` 的输出。
+`Run Example` 也会加载同一个 Qt 6.11 MinGW 环境，避免运行时找不到 MinGW 运行库 DLL。如果它提示缺少 `build\\hello_toide.exe`，说明编译没有成功完成，请先查看 `Build Example` 的输出。
 
 ## 后续会加入
 

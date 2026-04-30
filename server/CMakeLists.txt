@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 add_library(toide_server_core STATIC
+    src/auth/auth_service.cpp
     src/health/health_response.cpp
 )
 
@@ -11,17 +12,22 @@ target_include_directories(toide_server_core
 
 target_compile_features(toide_server_core PUBLIC cxx_std_20)
 
+find_package(Drogon CONFIG QUIET)
+
+if(Drogon_FOUND)
+    target_link_libraries(toide_server_core PUBLIC Drogon::Drogon)
+endif()
+
 if(MSVC)
     target_compile_options(toide_server_core PRIVATE /W4 /permissive-)
 else()
     target_compile_options(toide_server_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-find_package(Drogon CONFIG QUIET)
-
 if(Drogon_FOUND)
     add_executable(toide_server
         src/main.cpp
+        src/api/auth_controller.cpp
         src/api/collaboration_ws_controller.cpp
         src/api/health_controller.cpp
     )

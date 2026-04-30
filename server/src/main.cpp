@@ -1,3 +1,4 @@
+#include "api/auth_controller.h"
 #include "api/collaboration_ws_controller.h"
 #include "api/health_controller.h"
 

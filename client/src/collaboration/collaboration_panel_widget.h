@@ -33,10 +33,15 @@ public:
 
     void notifyCurrentFile(const QString &absoluteFilePath);
     void notifyLocalFileSaved(const QString &absoluteFilePath);
+    void setAuthSession(const QString &token, const QString &username);
+    void notifyLocalTextEdited(const QString &absoluteFilePath, const QString &text);
+    void notifyLocalCursorMoved(const QString &absoluteFilePath, int line, int column);
 
 signals:
     void serverHealthCheckRequested(const QUrl &serverBaseUrl);
     void collaborationRosterSynced();
+    void remoteFileUpdated(const QString &absoluteFilePath, const QString &text);
+    void remoteCursorMoved(const QString &absoluteFilePath, const QString &username, int line, int column);
 
 private:
 #ifdef TOIDE_HAVE_QT_WEBSOCKETS
@@ -61,6 +66,8 @@ private:
 
 #ifdef TOIDE_HAVE_QT_WEBSOCKETS
     QString localClientId_;
+    QString authToken_;
+    QString username_;
     QHash<QString, CollaboratorPeer> remotePeers_;
 #endif
 

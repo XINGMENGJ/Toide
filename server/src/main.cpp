@@ -1,3 +1,4 @@
+#include "api/collaboration_ws_controller.h"
 #include "api/health_controller.h"
 
 #include <drogon/drogon.h>

@@ -16,6 +16,7 @@ add_library(toide_client_core STATIC
     src/file_explorer/file_explorer_widget.cpp
     src/git/git_status_widget.cpp
     src/network/network_client.cpp
+    src/settings/server_endpoint_settings.cpp
     src/task_runner/task_config.cpp
     src/task_runner/task_diagnostic_parser.cpp
     src/task_runner/task_execution_request.cpp
@@ -43,6 +44,8 @@ target_compile_definitions(toide_client_core
 )
 
 if(MSVC)
+    # Qt headers require MSVC to report a standards-conforming __cplusplus value.
+    target_compile_options(toide_client_core PUBLIC /Zc:__cplusplus)
     target_compile_options(toide_client_core PRIVATE /W4 /permissive-)
 else()
     target_compile_options(toide_client_core PRIVATE -Wall -Wextra -Wpedantic)
@@ -103,6 +106,10 @@ add_toide_qt_test(toide_network_client_test
 
 add_toide_qt_test(toide_collaboration_panel_widget_test
     tests/collaboration_panel_widget_test.cpp
+)
+
+add_toide_qt_test(toide_server_endpoint_settings_test
+    tests/server_endpoint_settings_test.cpp
 )
 
 add_toide_qt_test(toide_task_config_test

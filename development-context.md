@@ -75,7 +75,9 @@
 - 新增 `server/` 后端骨架：包含可测试的 `toide_server_core`、health 响应生成、配置样例和 Drogon 控制器入口。
 - 当前本机未发现 Drogon 包，CMake 会先构建 server core 和测试；安装 Drogon 后会自动构建 `toide_server` 可执行文件。
 - 客户端新增 `NetworkClient`，可请求服务端 `/api/health` 并通过 `healthChecked` 信号报告 Online/Offline 状态。
-- 主窗口右侧协作面板从占位列表升级为 `CollaborationPanelWidget`，提供 `Check server` 按钮并显示服务端连接状态；当前默认连接 `http://127.0.0.1:8848/api/health`。
+- 主窗口右侧协作面板从占位列表升级为 `CollaborationPanelWidget`，提供 `Check server` 按钮并显示服务端连接状态；健康检查请求 `NetworkClient::checkHealth`，URL 为设置中的服务端基址 + `/api/health`。
+- 客户端 `ServerEndpointSettings` 将协作服务端基址（默认 `http://127.0.0.1:8848`）持久化到 `QStandardPaths::AppConfigLocation` 下的 `toide-client.ini`（键 `network/serverBaseUrl`）；协作面板提供可编辑行，失焦与点击检查时写回并规范化 URL；单测可用临时 ini 路径隔离。
+- 客户端 CMake 在 MSVC 上对 `toide_client_core` 使用 `/Zc:__cplusplus`，以满足 Qt 头文件对标准宏的要求；若 Qt Kit 与 MSVC 不匹配（例如引用 MinGW 版 Qt 却用 VS 生成器），链接会失败，此时应改用 MinGW + `MinGW Makefiles`（例如配合仓库内 `qt6.7-env.cmd`）或改为 MSVC 对应的 Qt 安装。
 
 ## 最近一次问题
 
@@ -94,9 +96,8 @@ Qt Creator 页面编译失败，错误集中在：
 
 ## 当前未提交改动
 
-- 已提交并推送 `4fe694b feat: copy git branch name`。
-- 本轮未提交改动：Git 状态面板无分支时禁用复制分支名按钮，加载分支后再启用；后端协作文档切换为 MySQL + Redis；新增 server 骨架和 health API 核心；新增客户端 `NetworkClient` 和协作面板服务端连接状态检查。
+- 工作区与远程差异请以 `git status` / ` git log origin/main..HEAD` 为准。
 
 ## 下一步建议
 
-下一步可以把服务端地址做成客户端设置项，或继续实现 WebSocket 协作连接握手和事件流。
+继续实现 WebSocket 协作连接握手和事件流（在可配置的 REST 基址之上扩展实时通道）。

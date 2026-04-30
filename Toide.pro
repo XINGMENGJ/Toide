@@ -19,6 +19,7 @@ SOURCES += \
     client/src/file_explorer/file_explorer_widget.cpp \
     client/src/git/git_status_widget.cpp \
     client/src/network/network_client.cpp \
+    client/src/settings/server_endpoint_settings.cpp \
     client/src/task_runner/task_config.cpp \
     client/src/task_runner/task_diagnostic_parser.cpp \
     client/src/task_runner/task_execution_request.cpp \
@@ -35,6 +36,7 @@ HEADERS += \
     client/src/file_explorer/file_explorer_widget.h \
     client/src/git/git_status_widget.h \
     client/src/network/network_client.h \
+    client/src/settings/server_endpoint_settings.h \
     client/src/task_runner/task_config.h \
     client/src/task_runner/task_diagnostic_parser.h \
     client/src/task_runner/task_execution_request.h \

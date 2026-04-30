@@ -3,7 +3,9 @@
 #include "collaboration/collaboration_panel_widget.h"
 
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
+#include <QTemporaryDir>
 
 class CollaborationPanelWidgetTest final : public QObject {
     Q_OBJECT
@@ -15,7 +17,10 @@ private slots:
 
 void CollaborationPanelWidgetTest::showsDisconnectedByDefault()
 {
-    CollaborationPanelWidget widget;
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    CollaborationPanelWidget widget(nullptr, dir.filePath(QStringLiteral("collab.ini")));
 
     auto *statusLabel = widget.findChild<QLabel *>(QStringLiteral("serverConnectionStatusLabel"));
     QVERIFY(statusLabel != nullptr);
@@ -24,11 +29,18 @@ void CollaborationPanelWidgetTest::showsDisconnectedByDefault()
     auto *checkButton = widget.findChild<QPushButton *>(QStringLiteral("checkServerConnectionButton"));
     QVERIFY(checkButton != nullptr);
     QVERIFY(checkButton->text().contains(QStringLiteral("Check")));
+
+    auto *urlEdit = widget.findChild<QLineEdit *>(QStringLiteral("serverBaseUrlLineEdit"));
+    QVERIFY(urlEdit != nullptr);
+    QVERIFY(!urlEdit->text().isEmpty());
 }
 
 void CollaborationPanelWidgetTest::showsOnlineAndOfflineStatus()
 {
-    CollaborationPanelWidget widget;
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    CollaborationPanelWidget widget(nullptr, dir.filePath(QStringLiteral("collab2.ini")));
 
     auto *statusLabel = widget.findChild<QLabel *>(QStringLiteral("serverConnectionStatusLabel"));
     QVERIFY(statusLabel != nullptr);

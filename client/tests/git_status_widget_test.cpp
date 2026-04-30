@@ -68,7 +68,7 @@ void GitStatusWidgetTest::loadStatusFromGitWorkspaceShowsBranchAndChanges()
 
     auto *statusView = widget.findChild<QTextEdit *>(QStringLiteral("gitStatusView"));
     QVERIFY(statusView != nullptr);
-    QVERIFY(statusView->toPlainText().contains(QStringLiteral("Branch")));
+    QVERIFY(statusView->toPlainText().contains(QStringLiteral("分支")));
     QVERIFY(statusView->toPlainText().contains(QStringLiteral("notes.txt")));
 }
 
@@ -92,7 +92,7 @@ void GitStatusWidgetTest::loadStatusFromCleanGitWorkspaceShowsCleanMessage()
 
     auto *statusView = widget.findChild<QTextEdit *>(QStringLiteral("gitStatusView"));
     QVERIFY(statusView != nullptr);
-    QVERIFY(statusView->toPlainText().contains(QStringLiteral("Working tree clean.")));
+    QVERIFY(statusView->toPlainText().contains(QStringLiteral("工作区干净。")));
 }
 
 void GitStatusWidgetTest::loadStatusFromGitWorkspaceGroupsChanges()
@@ -124,10 +124,10 @@ void GitStatusWidgetTest::loadStatusFromGitWorkspaceGroupsChanges()
     QVERIFY(statusView != nullptr);
 
     const auto text = statusView->toPlainText();
-    QVERIFY(text.contains(QStringLiteral("Branch")));
-    QVERIFY(text.contains(QStringLiteral("Staged")));
-    QVERIFY(text.contains(QStringLiteral("Unstaged")));
-    QVERIFY(text.contains(QStringLiteral("Untracked")));
+    QVERIFY(text.contains(QStringLiteral("分支")));
+    QVERIFY(text.contains(QStringLiteral("暂存区")));
+    QVERIFY(text.contains(QStringLiteral("未暂存")));
+    QVERIFY(text.contains(QStringLiteral("未跟踪")));
     QVERIFY(text.contains(QStringLiteral("staged.txt")));
     QVERIFY(text.contains(QStringLiteral("untracked.txt")));
 }
@@ -161,10 +161,10 @@ void GitStatusWidgetTest::loadStatusFromGitWorkspaceShowsChangeSummaryCounts()
     QVERIFY(statusView != nullptr);
 
     const auto text = statusView->toPlainText();
-    QVERIFY(text.contains(QStringLiteral("Summary")));
-    QVERIFY(text.contains(QStringLiteral("Staged: 1")));
-    QVERIFY(text.contains(QStringLiteral("Unstaged: 1")));
-    QVERIFY(text.contains(QStringLiteral("Untracked: 1")));
+    QVERIFY(text.contains(QStringLiteral("摘要")));
+    QVERIFY(text.contains(QStringLiteral("暂存：1")));
+    QVERIFY(text.contains(QStringLiteral("未暂存：1")));
+    QVERIFY(text.contains(QStringLiteral("未跟踪：1")));
 }
 
 void GitStatusWidgetTest::loadStatusShowsRefreshResult()
@@ -178,12 +178,12 @@ void GitStatusWidgetTest::loadStatusShowsRefreshResult()
     QVERIFY(statusLabel != nullptr);
 
     QVERIFY(widget.loadStatusFromWorkspace(gitWorkspace.path()));
-    QVERIFY(statusLabel->text().contains(QStringLiteral("Refreshed")));
+    QVERIFY(statusLabel->text().contains(QStringLiteral("已刷新")));
 
     QTemporaryDir nonGitWorkspace;
     QVERIFY(nonGitWorkspace.isValid());
     QVERIFY(!widget.loadStatusFromWorkspace(nonGitWorkspace.path()));
-    QVERIFY(statusLabel->text().contains(QStringLiteral("Not a Git repository")));
+    QVERIFY(statusLabel->text().contains(QStringLiteral("不是 Git 仓库")));
 }
 
 void GitStatusWidgetTest::copyStatusCopiesCurrentStatusToClipboard()
@@ -228,7 +228,7 @@ void GitStatusWidgetTest::copyStatusShowsCopiedFeedback()
 
     copyButton->click();
 
-    QVERIFY(statusLabel->text().contains(QStringLiteral("Copied status")));
+    QVERIFY(statusLabel->text().contains(QStringLiteral("已复制状态")));
 }
 
 void GitStatusWidgetTest::copyStatusWithoutStatusShowsHelpfulFeedback()
@@ -242,7 +242,7 @@ void GitStatusWidgetTest::copyStatusWithoutStatusShowsHelpfulFeedback()
     QVERIFY(setClipboardTextForTest(QStringLiteral("keep me")));
     copyButton->click();
 
-    QVERIFY(statusLabel->text().contains(QStringLiteral("No status to copy")));
+    QVERIFY(statusLabel->text().contains(QStringLiteral("没有可复制的状态")));
     QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("keep me"));
 }
 
@@ -258,7 +258,7 @@ void GitStatusWidgetTest::copyBranchCopiesCurrentBranchToClipboard()
     auto *statusView = widget.findChild<QTextEdit *>(QStringLiteral("gitStatusView"));
     QVERIFY(statusView != nullptr);
     const auto statusText = statusView->toPlainText();
-    QVERIFY(statusText.contains(QStringLiteral("Branch")));
+    QVERIFY(statusText.contains(QStringLiteral("分支")));
 
     auto *copyBranchButton = widget.findChild<QPushButton *>(QStringLiteral("copyGitBranchButton"));
     QVERIFY(copyBranchButton != nullptr);
@@ -269,7 +269,7 @@ void GitStatusWidgetTest::copyBranchCopiesCurrentBranchToClipboard()
 
     QVERIFY(!QGuiApplication::clipboard()->text().isEmpty());
     QVERIFY(statusText.contains(QGuiApplication::clipboard()->text()));
-    QVERIFY(statusLabel->text().contains(QStringLiteral("Copied branch")));
+    QVERIFY(statusLabel->text().contains(QStringLiteral("已复制分支名")));
 }
 
 void GitStatusWidgetTest::copyBranchIsOnlyEnabledWhenBranchIsAvailable()
@@ -324,7 +324,7 @@ void GitStatusWidgetTest::openTerminalShowsOpeningFeedback()
 
     openTerminalButton->click();
 
-    QVERIFY(statusLabel->text().contains(QStringLiteral("Opening terminal")));
+    QVERIFY(statusLabel->text().contains(QStringLiteral("正在打开终端")));
 }
 
 void GitStatusWidgetTest::loadStatusFromNonGitWorkspaceShowsHelpfulMessage()
@@ -337,7 +337,7 @@ void GitStatusWidgetTest::loadStatusFromNonGitWorkspaceShowsHelpfulMessage()
 
     auto *statusView = widget.findChild<QTextEdit *>(QStringLiteral("gitStatusView"));
     QVERIFY(statusView != nullptr);
-    QVERIFY(statusView->toPlainText().contains(QStringLiteral("Not a Git repository")));
+    QVERIFY(statusView->toPlainText().contains(QStringLiteral("不是 Git 仓库")));
 }
 
 QTEST_MAIN(GitStatusWidgetTest)

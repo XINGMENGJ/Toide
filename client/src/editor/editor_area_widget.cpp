@@ -136,6 +136,28 @@ int EditorAreaWidget::findTabByFilePath(const QString &filePath) const
     return -1;
 }
 
+void EditorAreaWidget::setServerDocVersionForPath(const QString &absolutePath, qint64 version)
+{
+    const int index = findTabByFilePath(absolutePath);
+    if (index < 0) {
+        return;
+    }
+    auto *editor = qobject_cast<EditorTab *>(tabs_->widget(index));
+    if (editor != nullptr) {
+        editor->setServerDocVersion(version);
+    }
+}
+
+qint64 EditorAreaWidget::serverDocVersionForPath(const QString &absolutePath) const
+{
+    const int index = findTabByFilePath(absolutePath);
+    if (index < 0) {
+        return -1;
+    }
+    const auto *editor = qobject_cast<EditorTab *>(tabs_->widget(index));
+    return editor != nullptr ? editor->serverDocVersion() : -1;
+}
+
 void EditorAreaWidget::updateTabTitle(int index)
 {
     if (index < 0) {

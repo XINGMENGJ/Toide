@@ -42,7 +42,7 @@ void NetworkClientTest::healthCheckReportsOnlineWhenServerReturnsOk()
     QVERIFY(spy.wait(3000));
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.at(0).at(0).toBool(), true);
-    QVERIFY(spy.at(0).at(1).toString().contains(QStringLiteral("Online")));
+    QVERIFY(spy.at(0).at(1).toString().contains(QStringLiteral("在线")));
 }
 
 void NetworkClientTest::healthCheckReportsOfflineWhenServerIsUnavailable()
@@ -68,7 +68,7 @@ void NetworkClientTest::healthCheckReportsOfflineWhenServerIsUnavailable()
     QVERIFY(spy.wait(3000));
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.at(0).at(0).toBool(), false);
-    QVERIFY(spy.at(0).at(1).toString().contains(QStringLiteral("Offline")));
+    QVERIFY(spy.at(0).at(1).toString().contains(QStringLiteral("离线")));
 }
 
 QTEST_MAIN(NetworkClientTest)

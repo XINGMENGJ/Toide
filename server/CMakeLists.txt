@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 add_library(toide_server_core STATIC
+    src/auth/auth_db.cpp
     src/auth/auth_service.cpp
     src/health/health_response.cpp
 )
@@ -30,6 +31,16 @@ if(Drogon_FOUND)
         src/api/auth_controller.cpp
         src/api/collaboration_ws_controller.cpp
         src/api/health_controller.cpp
+        src/api/workspace_files_controller.cpp
+        src/collaboration/redis_collab_store.cpp
+    )
+
+    add_custom_command(TARGET toide_server POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:toide_server>/server/config"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/config/server.json"
+                "$<TARGET_FILE_DIR:toide_server>/server/config/server.json"
+        COMMENT "Copy server.json next to toide_server executable"
     )
 
     target_link_libraries(toide_server

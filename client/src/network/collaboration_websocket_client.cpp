@@ -9,6 +9,9 @@
 CollaborationWebSocketClient::CollaborationWebSocketClient(QObject *parent)
     : QObject(parent)
 {
+    reconnectTimer_.setSingleShot(true);
+    reconnectTimer_.setInterval(3000);
+    connect(&reconnectTimer_, &QTimer::timeout, this, &CollaborationWebSocketClient::openLastUrl);
 }
 
 CollaborationWebSocketClient::~CollaborationWebSocketClient()
@@ -59,8 +62,16 @@ void CollaborationWebSocketClient::ensureSocket()
         return;
     }
     socket_ = std::make_unique<QWebSocket>(QString(), QWebSocketProtocol::VersionLatest, this);
-    connect(socket_.get(), &QWebSocket::connected, this, &CollaborationWebSocketClient::connected);
-    connect(socket_.get(), &QWebSocket::disconnected, this, &CollaborationWebSocketClient::disconnected);
+    connect(socket_.get(), &QWebSocket::connected, this, [this]() {
+        reconnectTimer_.stop();
+        emit connected();
+    });
+    connect(socket_.get(), &QWebSocket::disconnected, this, [this]() {
+        emit disconnected();
+        if (reconnectEnabled_ && !userDisconnectRequested_) {
+            scheduleReconnect();
+        }
+    });
     connect(socket_.get(), &QWebSocket::textMessageReceived, this, &CollaborationWebSocketClient::textMessageReceived);
     QT_WARNING_PUSH
     QT_WARNING_DISABLE_DEPRECATED
@@ -75,6 +86,10 @@ void CollaborationWebSocketClient::ensureSocket()
 
 void CollaborationWebSocketClient::connectToServer(const QUrl &wsUrl)
 {
+    lastUrl_ = wsUrl;
+    reconnectEnabled_ = true;
+    userDisconnectRequested_ = false;
+    reconnectTimer_.stop();
     ensureSocket();
     if (socket_->state() != QAbstractSocket::UnconnectedState) {
         socket_->abort();
@@ -84,6 +99,9 @@ void CollaborationWebSocketClient::connectToServer(const QUrl &wsUrl)
 
 void CollaborationWebSocketClient::disconnectFromServer()
 {
+    reconnectEnabled_ = false;
+    userDisconnectRequested_ = true;
+    reconnectTimer_.stop();
     if (socket_) {
         socket_->close();
         socket_.reset();
@@ -100,4 +118,34 @@ void CollaborationWebSocketClient::sendTextMessage(const QString &message)
 bool CollaborationWebSocketClient::isConnected() const
 {
     return socket_ && socket_->state() == QAbstractSocket::ConnectedState;
+}
+
+bool CollaborationWebSocketClient::isReconnectEnabled() const
+{
+    return reconnectEnabled_;
+}
+
+int CollaborationWebSocketClient::reconnectIntervalMs() const
+{
+    return reconnectTimer_.interval();
+}
+
+void CollaborationWebSocketClient::scheduleReconnect()
+{
+    if (!lastUrl_.isValid() || reconnectTimer_.isActive()) {
+        return;
+    }
+    reconnectTimer_.start();
+}
+
+void CollaborationWebSocketClient::openLastUrl()
+{
+    if (!reconnectEnabled_ || userDisconnectRequested_ || !lastUrl_.isValid()) {
+        return;
+    }
+    ensureSocket();
+    if (socket_->state() != QAbstractSocket::UnconnectedState) {
+        socket_->abort();
+    }
+    socket_->open(lastUrl_);
 }

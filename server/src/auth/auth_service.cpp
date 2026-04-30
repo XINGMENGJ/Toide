@@ -1,7 +1,12 @@
 #include "auth/auth_service.h"
 
+#include "auth/auth_db.h"
+
+#include <drogon/drogon.h>
+
 #include <trantor/utils/Utilities.h>
 
+#include <cctype>
 #include <chrono>
 #include <iomanip>
 #include <mutex>
@@ -47,17 +52,6 @@ std::string randomHex()
     return os.str();
 }
 
-std::string trimmed(std::string s)
-{
-    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
-        s.erase(s.begin());
-    }
-    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
-        s.pop_back();
-    }
-    return s;
-}
-
 std::string makePasswordHash(const std::string &salt, const std::string &password)
 {
     return sha256Hex(salt + ":" + password);
@@ -67,6 +61,17 @@ std::string makeToken(const AuthenticatedUser &user)
 {
     const auto now = std::chrono::system_clock::now().time_since_epoch().count();
     return std::string("toide_") + sha256Hex(user.id + ":" + user.username + ":" + std::to_string(now) + ":" + randomHex());
+}
+
+std::string trimmed(std::string s)
+{
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+        s.erase(s.begin());
+    }
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+        s.pop_back();
+    }
+    return s;
 }
 
 } // namespace
@@ -93,6 +98,28 @@ AuthResult AuthService::registerUser(const std::string &usernameInput, const std
         return result;
     }
 
+    if (auto db = db::tryDefaultDbClient()) {
+        try {
+            db::ensureUsersTable(db);
+            AuthResult dbResult = db::registerUserDb(db, username, password);
+            if (dbResult.ok) {
+                std::lock_guard<std::mutex> lock(g_authMutex);
+                const std::string token = makeToken(dbResult.user);
+                g_tokens.insert({token, dbResult.user});
+                dbResult.token = token;
+                return dbResult;
+            }
+            if (dbResult.message == "Username already exists." || dbResult.message == "Invalid username or password.") {
+                return dbResult;
+            }
+            if (dbResult.message != "Database unavailable." && dbResult.message != "Database error.") {
+                return dbResult;
+            }
+        } catch (const std::exception &e) {
+            LOG_WARN << "registerUser MySQL: " << e.what();
+        }
+    }
+
     std::lock_guard<std::mutex> lock(g_authMutex);
     if (g_usersByName.find(username) != g_usersByName.end()) {
         AuthResult result;
@@ -116,6 +143,29 @@ AuthResult AuthService::registerUser(const std::string &usernameInput, const std
 AuthResult AuthService::login(const std::string &usernameInput, const std::string &password)
 {
     const std::string username = trimmed(usernameInput);
+
+    if (auto db = db::tryDefaultDbClient()) {
+        try {
+            db::ensureUsersTable(db);
+            AuthResult dbResult = db::loginUserDb(db, username, password);
+            if (dbResult.ok) {
+                std::lock_guard<std::mutex> lock(g_authMutex);
+                const std::string token = makeToken(dbResult.user);
+                g_tokens.insert({token, dbResult.user});
+                dbResult.token = token;
+                return dbResult;
+            }
+            if (dbResult.message == "Invalid username or password.") {
+                return dbResult;
+            }
+            if (dbResult.message != "Database unavailable." && dbResult.message != "Database error.") {
+                return dbResult;
+            }
+        } catch (const std::exception &e) {
+            LOG_WARN << "login MySQL: " << e.what();
+        }
+    }
+
     std::lock_guard<std::mutex> lock(g_authMutex);
     const auto it = g_usersByName.find(username);
     if (it == g_usersByName.end()) {

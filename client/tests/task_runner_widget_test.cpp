@@ -122,7 +122,7 @@ void TaskRunnerWidgetTest::successfulTaskShowsSucceededStatus()
 
     QTest::mouseClick(runButton, Qt::LeftButton);
 
-    QTRY_COMPARE_WITH_TIMEOUT(statusLabel->text(), QStringLiteral("Succeeded"), 3000);
+    QTRY_COMPARE_WITH_TIMEOUT(statusLabel->text(), QStringLiteral("成功"), 3000);
     QVERIFY(runButton->isEnabled());
     QVERIFY(!stopButton->isEnabled());
 }
@@ -163,7 +163,7 @@ void TaskRunnerWidgetTest::failedTaskShowsExitCodeStatus()
 
     QTest::mouseClick(runButton, Qt::LeftButton);
 
-    QTRY_COMPARE_WITH_TIMEOUT(statusLabel->text(), QStringLiteral("Failed: exit code 7"), 3000);
+    QTRY_COMPARE_WITH_TIMEOUT(statusLabel->text(), QStringLiteral("失败：退出码 7"), 3000);
     QVERIFY(runButton->isEnabled());
     QVERIFY(!stopButton->isEnabled());
 }
@@ -202,7 +202,7 @@ void TaskRunnerWidgetTest::compilerOutputShowsDiagnosticSummary()
 
     QTest::mouseClick(runButton, Qt::LeftButton);
 
-    QTRY_VERIFY_WITH_TIMEOUT(outputView->toPlainText().contains(QStringLiteral("Diagnostics:")), 3000);
+    QTRY_VERIFY_WITH_TIMEOUT(outputView->toPlainText().contains(QStringLiteral("诊断信息：")), 3000);
     QVERIFY(outputView->toPlainText().contains(QStringLiteral("error: src/hello_toide.cpp:5:18: expected semicolon")));
 }
 
@@ -240,7 +240,7 @@ void TaskRunnerWidgetTest::diagnosticLinkRequestsOpeningSourceLocation()
     QVERIFY(outputView != nullptr);
 
     QTest::mouseClick(runButton, Qt::LeftButton);
-    QTRY_VERIFY_WITH_TIMEOUT(outputView->toPlainText().contains(QStringLiteral("Diagnostics:")), 3000);
+    QTRY_VERIFY_WITH_TIMEOUT(outputView->toPlainText().contains(QStringLiteral("诊断信息：")), 3000);
 
     QVERIFY(QMetaObject::invokeMethod(
         outputView,
@@ -290,19 +290,19 @@ void TaskRunnerWidgetTest::stopButtonStopsRunningTaskAndRestoresIdleState()
     QVERIFY(statusLabel != nullptr);
     QVERIFY(runButton->isEnabled());
     QVERIFY(!stopButton->isEnabled());
-    QCOMPARE(statusLabel->text(), QStringLiteral("Idle"));
+    QCOMPARE(statusLabel->text(), QStringLiteral("空闲"));
 
     QTest::mouseClick(runButton, Qt::LeftButton);
 
     QTRY_VERIFY_WITH_TIMEOUT(!runButton->isEnabled(), 1000);
     QVERIFY(stopButton->isEnabled());
-    QCOMPARE(statusLabel->text(), QStringLiteral("Running: Long Running"));
+    QCOMPARE(statusLabel->text(), QStringLiteral("运行中：Long Running"));
 
     QTest::mouseClick(stopButton, Qt::LeftButton);
 
     QTRY_VERIFY_WITH_TIMEOUT(runButton->isEnabled(), 3000);
     QVERIFY(!stopButton->isEnabled());
-    QCOMPARE(statusLabel->text(), QStringLiteral("Idle"));
+    QCOMPARE(statusLabel->text(), QStringLiteral("空闲"));
 }
 
 QTEST_MAIN(TaskRunnerWidgetTest)

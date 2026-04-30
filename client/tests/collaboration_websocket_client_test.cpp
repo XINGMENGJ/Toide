@@ -15,6 +15,7 @@ private slots:
     void buildUrlMapsHttpToWsWithPath();
     void buildUrlIncludesClientIdQuery();
     void echoRoundTripOverLocalServer();
+    void manualDisconnectDisablesReconnect();
 };
 
 void CollaborationWebSocketClientTest::buildUrlMapsHttpToWsWithPath()
@@ -72,6 +73,18 @@ void CollaborationWebSocketClientTest::echoRoundTripOverLocalServer()
     QCOMPARE(replySpy.first().first().toString(), QStringLiteral("echo:hi"));
 
     client.disconnectFromServer();
+}
+
+void CollaborationWebSocketClientTest::manualDisconnectDisablesReconnect()
+{
+    CollaborationWebSocketClient client;
+    QCOMPARE(client.reconnectIntervalMs(), 3000);
+    client.connectToServer(QUrl(QStringLiteral("ws://127.0.0.1:9/ws/projects/p")));
+    QVERIFY(client.isReconnectEnabled());
+
+    client.disconnectFromServer();
+
+    QVERIFY(!client.isReconnectEnabled());
 }
 
 QTEST_MAIN(CollaborationWebSocketClientTest)

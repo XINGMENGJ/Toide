@@ -1,6 +1,11 @@
 # Build outputs
 build/
+.toide-build/
 build-*/
+dist/
+
+# Local Office/binary drafts at repo root (not source)
+*.doc
 CMakeFiles/
 bin/
 debug/

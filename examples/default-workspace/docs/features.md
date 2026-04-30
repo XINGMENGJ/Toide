@@ -23,7 +23,7 @@ Toide 会把一个本地目录作为工作区。当前示例工作区位于 `exa
 
 - 显示任务列表。
 - 执行当前选中的任务。
-- 通过 `Build Example` 自动加载 Qt 6.11 MinGW 环境并编译示例 C++ 文件。
+- 通过 `Build Example` 自动加载 Qt 6.11 MinGW 环境并编译 `include/` + `src/` 多文件示例。
 - 通过 `Run Example` 运行编译产物。
 - 在编译产物缺失时给出需要先构建的提示。
 - 通过 `Build Diagnostics Demo` 故意触发编译错误，验证诊断输出。

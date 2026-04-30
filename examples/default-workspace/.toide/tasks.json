@@ -7,7 +7,7 @@
     },
     {
       "name": "Build Example",
-      "command": "call ..\\..\\qt6.7-env.cmd >nul && (mkdir build 2>nul & where g++ && g++ --version && g++ -std=gnu++2a -Wall -Wextra src\\hello_toide.cpp -o build\\hello_toide.exe && echo Built build\\hello_toide.exe)",
+      "command": "call ..\\..\\qt6.7-env.cmd >nul && (mkdir build 2>nul & where g++ && g++ --version && g++ -std=gnu++2a -Wall -Wextra -Iinclude src\\main.cpp src\\greeting.cpp -o build\\hello_toide.exe && echo Built build\\hello_toide.exe)",
       "workingDirectory": "${workspaceRoot}"
     },
     {
@@ -17,7 +17,7 @@
     },
     {
       "name": "Build Diagnostics Demo",
-      "command": "call ..\\..\\qt6.7-env.cmd >nul && (mkdir build 2>nul & where g++ && g++ --version && g++ -std=gnu++2a -Wall -Wextra src\\diagnostic_demo.cpp -o build\\diagnostic_demo.exe)",
+      "command": "call ..\\..\\qt6.7-env.cmd >nul && (mkdir build 2>nul & where g++ && g++ --version && g++ -std=gnu++2a -Wall -Wextra diagnostics\\diagnostic_demo.cpp -o build\\diagnostic_demo.exe)",
       "workingDirectory": "${workspaceRoot}"
     },
     {

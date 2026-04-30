@@ -1,7 +1,8 @@
 @echo off
-set "QTDIR=E:\Qt\QTN\6.7.0\mingw_64"
+rem Loads Qt MinGW into PATH for building Toide (Qt 6.11 + MinGW 13.1; filename kept for tasks/scripts).
+set "QTDIR=E:\Qt\QTN\6.11.0\mingw_64"
 set "QT_TOOLS=E:\Qt\QTN\Tools"
-set "MINGW_DIR=%QT_TOOLS%\mingw1120_64"
+set "MINGW_DIR=%QT_TOOLS%\mingw1310_64"
 set "CMAKE_DIR=%QT_TOOLS%\CMake_64"
 
 set "PATH=%QTDIR%\bin;%MINGW_DIR%\bin;%CMAKE_DIR%\bin;%PATH%"

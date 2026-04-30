@@ -1,3 +1,5 @@
+#include "api/health_controller.h"
+
 #include <drogon/drogon.h>
 
 int main()

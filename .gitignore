@@ -21,6 +21,14 @@ ui_*.h
 *.user.*
 server/config/server.json
 
+# Local Redis runtime (Windows dev; see scripts/bootstrap-redis-windows.ps1)
+tools/redis-windows/runtime/
+tools/redis-windows/*.zip
+tools/redis-windows/data/
+tools/redis-windows/redis.log
+tools/redis-windows/dump.rdb
+tools/redis-windows/*.aof
+
 # OS files
 Thumbs.db
 Desktop.ini

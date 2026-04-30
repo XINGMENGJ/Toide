@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-find_package(Qt6 REQUIRED COMPONENTS Network Widgets Test)
+find_package(Qt6 REQUIRED COMPONENTS Network Widgets Test OPTIONAL_COMPONENTS WebSockets)
 
 qt_standard_project_setup()
 
@@ -8,7 +8,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-add_library(toide_client_core STATIC
+set(TOIDE_CLIENT_CORE_SOURCES
     src/app/main_window.cpp
     src/collaboration/collaboration_panel_widget.cpp
     src/editor/editor_area_widget.cpp
@@ -26,6 +26,17 @@ add_library(toide_client_core STATIC
     src/workspace/workspace_manager.cpp
 )
 
+if(TARGET Qt6::WebSockets)
+    list(APPEND TOIDE_CLIENT_CORE_SOURCES src/network/collaboration_websocket_client.cpp)
+    message(STATUS "Qt WebSockets: enabled (CollaborationWebSocketClient will be built)")
+else()
+    message(STATUS "Qt WebSockets: not installed — skipping CollaborationWebSocketClient; add via Qt Maintenance Tool to enable")
+endif()
+
+add_library(toide_client_core STATIC
+    ${TOIDE_CLIENT_CORE_SOURCES}
+)
+
 target_include_directories(toide_client_core
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -36,6 +47,10 @@ target_link_libraries(toide_client_core
         Qt6::Network
         Qt6::Widgets
 )
+
+if(TARGET Qt6::WebSockets)
+    target_link_libraries(toide_client_core PUBLIC Qt6::WebSockets)
+endif()
 
 target_compile_features(toide_client_core PUBLIC cxx_std_20)
 target_compile_definitions(toide_client_core
@@ -103,6 +118,12 @@ add_toide_qt_test(toide_git_status_widget_test
 add_toide_qt_test(toide_network_client_test
     tests/network_client_test.cpp
 )
+
+if(TARGET Qt6::WebSockets)
+    add_toide_qt_test(toide_collaboration_websocket_client_test
+        tests/collaboration_websocket_client_test.cpp
+    )
+endif()
 
 add_toide_qt_test(toide_collaboration_panel_widget_test
     tests/collaboration_panel_widget_test.cpp

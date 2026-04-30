@@ -1,5 +1,11 @@
 QT += network widgets
 
+qtHaveModule(websockets) {
+    QT += websockets
+    SOURCES += client/src/network/collaboration_websocket_client.cpp
+    HEADERS += client/src/network/collaboration_websocket_client.h
+}
+
 CONFIG += c++20
 CONFIG -= app_bundle
 

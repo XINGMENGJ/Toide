@@ -33,6 +33,17 @@ void CollaborationPanelWidgetTest::showsDisconnectedByDefault()
     auto *urlEdit = widget.findChild<QLineEdit *>(QStringLiteral("serverBaseUrlLineEdit"));
     QVERIFY(urlEdit != nullptr);
     QVERIFY(!urlEdit->text().isEmpty());
+
+    auto *channelLabel = widget.findChild<QLabel *>(QStringLiteral("collaborationChannelStatusLabel"));
+    QVERIFY(channelLabel != nullptr);
+#ifdef TOIDE_HAVE_QT_WEBSOCKETS
+    QVERIFY(channelLabel->text().contains(QStringLiteral("disconnected"), Qt::CaseInsensitive));
+    auto *channelButton = widget.findChild<QPushButton *>(QStringLiteral("collaborationChannelButton"));
+    QVERIFY(channelButton != nullptr);
+    QVERIFY(!channelButton->isHidden());
+#else
+    QVERIFY(channelLabel->text().contains(QStringLiteral("unavailable"), Qt::CaseInsensitive));
+#endif
 }
 
 void CollaborationPanelWidgetTest::showsOnlineAndOfflineStatus()

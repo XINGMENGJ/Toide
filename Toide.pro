@@ -4,6 +4,7 @@ qtHaveModule(websockets) {
     QT += websockets
     SOURCES += client/src/network/collaboration_websocket_client.cpp
     HEADERS += client/src/network/collaboration_websocket_client.h
+    DEFINES += TOIDE_HAVE_QT_WEBSOCKETS
 }
 
 CONFIG += c++20

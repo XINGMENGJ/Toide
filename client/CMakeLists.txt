@@ -50,6 +50,7 @@ target_link_libraries(toide_client_core
 
 if(TARGET Qt6::WebSockets)
     target_link_libraries(toide_client_core PUBLIC Qt6::WebSockets)
+    target_compile_definitions(toide_client_core PUBLIC TOIDE_HAVE_QT_WEBSOCKETS=1)
 endif()
 
 target_compile_features(toide_client_core PUBLIC cxx_std_20)

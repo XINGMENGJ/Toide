@@ -6,6 +6,13 @@ dist/
 
 # Local Office/binary drafts at repo root (not source)
 *.doc
+*.docx
+
+# Example docs stay local-only (not published)
+examples/default-workspace/docs/
+
+# License stub copies (do not track)
+**/XINGMENG*.txt
 CMakeFiles/
 bin/
 debug/

@@ -16,6 +16,8 @@ CONFIG -= app_bundle
 TEMPLATE = app
 TARGET = Toide
 
+win32:RC_ICONS = client/resources/app.ico
+
 INCLUDEPATH += client/src
 
 DEFINES += TOIDE_SOURCE_DIR=\\\"$$PWD\\\"

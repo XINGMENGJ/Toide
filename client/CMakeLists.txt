@@ -81,10 +81,15 @@ qt_add_executable(toide_client
     src/main.cpp
 )
 
+if(WIN32)
+    target_sources(toide_client PRIVATE resources/toide_app.rc)
+endif()
+
 qt_add_resources(toide_client toide_changelog
     PREFIX "/toide"
     FILES
         resources/app_changelog.txt
+        resources/app.ico
 )
 
 target_link_libraries(toide_client

@@ -483,7 +483,7 @@ void MainWindow::showChangelogDialog()
 
     auto *browser = new QTextBrowser(&dialog);
     browser->setOpenExternalLinks(false);
-    QFile bundled(QStringLiteral(":/toide/app_changelog.txt"));
+    QFile bundled(QStringLiteral(":/toide/resources/app_changelog.txt"));
     if (bundled.open(QIODevice::ReadOnly)) {
         browser->setPlainText(QString::fromUtf8(bundled.readAll()));
     } else {

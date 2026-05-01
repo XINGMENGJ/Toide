@@ -1,0 +1,1 @@
+XINGMENG · v1.0.1 -- directory marker only; not read by build or runtime.

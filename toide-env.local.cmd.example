@@ -1,0 +1,6 @@
+@echo off
+rem Copy to toide-env.local.cmd (gitignored) and edit paths for your machine.
+rem qt6.7-env.cmd loads this file automatically when present.
+
+set "TOIDE_QT_DIR=C:\Qt\6.11.0\mingw_64"
+set "TOIDE_QT_TOOLS=C:\Qt\Tools"

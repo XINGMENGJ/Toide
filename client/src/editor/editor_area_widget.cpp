@@ -97,6 +97,16 @@ bool EditorAreaWidget::saveCurrentFile()
     return saved;
 }
 
+void EditorAreaWidget::closeAllTabs()
+{
+    while (tabs_->count() > 0) {
+        QWidget *widget = tabs_->widget(0);
+        tabs_->removeTab(0);
+        widget->deleteLater();
+    }
+    emit currentFilePathChanged(QString());
+}
+
 void EditorAreaWidget::applyRemoteFileText(const QString &absolutePath, const QString &text)
 {
     const int index = findTabByFilePath(absolutePath);

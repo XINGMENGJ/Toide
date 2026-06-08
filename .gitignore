@@ -3,13 +3,43 @@ build/
 .toide-build/
 build-*/
 dist/
+.third_party/
 
 # Local Office/binary drafts at repo root (not source)
 *.doc
 *.docx
 
+# Project documentation (not published)
+docs/
+photo/
+ai-development-prompts.md
+development-context.md
+（2）*
+（3）*
+（4）*
+Untitled-*.txt
+*.code-workspace
+Toide_resource.rc
+
+# Local environment overrides
+toide-env.local.cmd
+
 # Example docs stay local-only (not published)
 examples/default-workspace/docs/
+examples/default-workspace/.toide/
+examples/default-workspace/**/new-*/
+examples/default-workspace/adc/
+examples/default-workspace/diagnostics/new-*/
+examples/default-workspace/eee/
+examples/default-workspace/src/new-*/
+examples/default-workspace/1.txt
+examples/default-workspace/123
+examples/default-workspace/kkkkk
+examples/default-workspace/qwe.txt
+
+# Local icon drafts at repo root
+三代图标.png
+新图标.png
 
 # License stub copies (do not track)
 **/XINGMENG*.txt
@@ -44,3 +74,4 @@ tools/redis-windows/*.aof
 # OS files
 Thumbs.db
 Desktop.ini
+New folder/

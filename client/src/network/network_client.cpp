@@ -240,3 +240,193 @@ void NetworkClient::putWorkspaceFileContent(const QUrl &serverBaseUrl,
         emit workspaceFileUploadFinished(true, QString(), absoluteFilePath, newV, false, -1);
     });
 }
+
+void NetworkClient::listWorkspaces(const QUrl &serverBaseUrl, const QString &bearerToken)
+{
+    QUrl url(serverBaseUrl);
+    url.setPath(QStringLiteral("/api/workspaces"));
+
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    request.setRawHeader("Authorization", QStringLiteral("Bearer %1").arg(bearerToken).toUtf8());
+
+    auto *reply = network_.get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        const auto guard = qScopeGuard([reply]() {
+            reply->deleteLater();
+        });
+        const QByteArray rawBody = reply->readAll();
+        const auto body = QJsonDocument::fromJson(rawBody).object();
+        if (reply->error() != QNetworkReply::NoError) {
+            emit workspacesListFetched(false, errorMessageFromBody(body, reply->errorString()), {});
+            return;
+        }
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (status == 401) {
+            emit workspacesListFetched(false,
+                                       body.value(QStringLiteral("error")).toObject().value(QStringLiteral("message")).toString(
+                                           QStringLiteral("未授权")),
+                                       {});
+            return;
+        }
+        if (status < 200 || status >= 300) {
+            emit workspacesListFetched(false,
+                                       errorMessageFromBody(body, QStringLiteral("HTTP %1").arg(QString::number(status))),
+                                       {});
+            return;
+        }
+        const QJsonArray list = body.value(QStringLiteral("workspaces")).toArray();
+        emit workspacesListFetched(true, QString(), list);
+    });
+}
+
+void NetworkClient::createWorkspace(const QUrl &serverBaseUrl, const QString &name, const QString &bearerToken)
+{
+    QUrl url(serverBaseUrl);
+    url.setPath(QStringLiteral("/api/workspaces"));
+
+    QJsonObject payload;
+    payload[QStringLiteral("name")] = name;
+
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    request.setRawHeader("Authorization", QStringLiteral("Bearer %1").arg(bearerToken).toUtf8());
+
+    auto *reply = network_.post(request, QJsonDocument(payload).toJson(QJsonDocument::Compact));
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        const auto guard = qScopeGuard([reply]() {
+            reply->deleteLater();
+        });
+        const QByteArray rawBody = reply->readAll();
+        const auto body = QJsonDocument::fromJson(rawBody).object();
+        if (reply->error() != QNetworkReply::NoError) {
+            emit workspaceCreated(false, errorMessageFromBody(body, reply->errorString()), {}, {});
+            return;
+        }
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (status == 401) {
+            emit workspaceCreated(false,
+                                  body.value(QStringLiteral("error")).toObject().value(QStringLiteral("message")).toString(
+                                      QStringLiteral("未授权")),
+                                  {},
+                                  {});
+            return;
+        }
+        if (status < 200 || status >= 300) {
+            emit workspaceCreated(false,
+                                  errorMessageFromBody(body, QStringLiteral("HTTP %1").arg(QString::number(status))),
+                                  {},
+                                  {});
+            return;
+        }
+        const QString id = body.value(QStringLiteral("id")).toString();
+        const QString name = body.value(QStringLiteral("name")).toString();
+        emit workspaceCreated(true, QString(), id, name);
+    });
+}
+
+void NetworkClient::fetchWorkspaceManifest(const QUrl &serverBaseUrl, const QString &projectKey, const QString &bearerToken)
+{
+    QUrl url(serverBaseUrl);
+    url.setPath(QStringLiteral("/api/workspace/files/manifest"));
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("projectKey"), projectKey);
+    url.setQuery(query);
+
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    request.setRawHeader("Authorization", QStringLiteral("Bearer %1").arg(bearerToken).toUtf8());
+
+    auto *reply = network_.get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        const auto guard = qScopeGuard([reply]() {
+            reply->deleteLater();
+        });
+        const QByteArray rawBody = reply->readAll();
+        const auto body = QJsonDocument::fromJson(rawBody).object();
+        if (reply->error() != QNetworkReply::NoError) {
+            emit workspaceManifestFetched(false, errorMessageFromBody(body, reply->errorString()), {});
+            return;
+        }
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (status == 401) {
+            emit workspaceManifestFetched(false,
+                                          body.value(QStringLiteral("error")).toObject().value(QStringLiteral("message")).toString(
+                                              QStringLiteral("未授权")),
+                                          {});
+            return;
+        }
+        if (status < 200 || status >= 300) {
+            emit workspaceManifestFetched(false,
+                                          errorMessageFromBody(body, QStringLiteral("HTTP %1").arg(QString::number(status))),
+                                          {});
+            return;
+        }
+        emit workspaceManifestFetched(true, QString(), body.value(QStringLiteral("files")).toArray());
+    });
+}
+
+void NetworkClient::fetchWorkspaceLatestFile(const QUrl &serverBaseUrl,
+                                             const QString &projectKey,
+                                             const QString &relativePath,
+                                             const QString &bearerToken)
+{
+    QUrl url(serverBaseUrl);
+    url.setPath(QStringLiteral("/api/workspace/files/latest"));
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("projectKey"), projectKey);
+    query.addQueryItem(QStringLiteral("path"), relativePath);
+    url.setQuery(query);
+
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    request.setRawHeader("Authorization", QStringLiteral("Bearer %1").arg(bearerToken).toUtf8());
+
+    auto *reply = network_.get(request);
+    connect(reply, &QNetworkReply::finished, this,
+            [this, reply, relativePath]() {
+                const auto guard = qScopeGuard([reply]() {
+                    reply->deleteLater();
+                });
+                const QByteArray rawBody = reply->readAll();
+                const auto body = QJsonDocument::fromJson(rawBody).object();
+                if (reply->error() != QNetworkReply::NoError) {
+                    emit workspaceLatestFileFetched(false, errorMessageFromBody(body, reply->errorString()), relativePath,
+                                                    {}, -1);
+                    return;
+                }
+                const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                if (status == 401) {
+                    emit workspaceLatestFileFetched(
+                        false,
+                        body.value(QStringLiteral("error")).toObject().value(QStringLiteral("message")).toString(
+                            QStringLiteral("未授权")),
+                        relativePath,
+                        {},
+                        -1);
+                    return;
+                }
+                if (status == 404) {
+                    emit workspaceLatestFileFetched(
+                        false,
+                        body.value(QStringLiteral("error")).toObject().value(QStringLiteral("message")).toString(
+                            QStringLiteral("无此文件")),
+                        relativePath,
+                        {},
+                        -1);
+                    return;
+                }
+                if (status < 200 || status >= 300) {
+                    emit workspaceLatestFileFetched(
+                        false,
+                        errorMessageFromBody(body, QStringLiteral("HTTP %1").arg(QString::number(status))),
+                        relativePath,
+                        {},
+                        -1);
+                    return;
+                }
+                const QString content = body.value(QStringLiteral("content")).toString();
+                const qint64 ver = body.value(QStringLiteral("version")).toVariant().toLongLong();
+                emit workspaceLatestFileFetched(true, QString(), relativePath, content, ver);
+            });
+}

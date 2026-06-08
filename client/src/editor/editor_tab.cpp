@@ -174,7 +174,13 @@ bool EditorTab::save()
         return false;
     }
 
-    file.write(text().toUtf8());
+    const QByteArray body = text().toUtf8();
+    if (file.write(body) != body.size()) {
+        return false;
+    }
+    if (!file.flush()) {
+        return false;
+    }
     setDirty(false);
     return true;
 }

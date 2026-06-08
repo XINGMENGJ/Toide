@@ -3,8 +3,7 @@
 #include <QAbstractSocket>
 #include <QUrlQuery>
 #include <QWebSocket>
-
-#include <QtCore/QtCompilerDetection>
+#include <QWebSocketProtocol>
 
 CollaborationWebSocketClient::CollaborationWebSocketClient(QObject *parent)
     : QObject(parent)
@@ -73,15 +72,12 @@ void CollaborationWebSocketClient::ensureSocket()
         }
     });
     connect(socket_.get(), &QWebSocket::textMessageReceived, this, &CollaborationWebSocketClient::textMessageReceived);
-    QT_WARNING_PUSH
-    QT_WARNING_DISABLE_DEPRECATED
     connect(socket_.get(),
-            static_cast<void (QWebSocket::*)(QAbstractSocket::SocketError)>(&QWebSocket::error),
+            &QWebSocket::errorOccurred,
             this,
             [this](QAbstractSocket::SocketError) {
                 emit errorOccurred(socket_->errorString());
             });
-    QT_WARNING_POP
 }
 
 void CollaborationWebSocketClient::connectToServer(const QUrl &wsUrl)

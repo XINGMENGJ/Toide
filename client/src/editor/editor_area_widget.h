@@ -22,6 +22,7 @@ public slots:
     bool openFile(const QString &filePath);
     bool openFileAt(const QString &filePath, int line, int column);
     bool saveCurrentFile();
+    void closeAllTabs();
     void applyRemoteFileText(const QString &absolutePath, const QString &text);
     void showRemoteCursor(const QString &absolutePath, const QString &username, int line, int column);
     void setServerDocVersionForPath(const QString &absolutePath, qint64 version);

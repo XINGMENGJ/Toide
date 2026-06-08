@@ -85,8 +85,11 @@ CollaborationPanelWidget::CollaborationPanelWidget(QWidget *parent, const QStrin
     connect(collaborationChannelButton_, &QPushButton::clicked, this,
             &CollaborationPanelWidget::onCollaborationChannelButtonClicked);
 #else
+    collaborationChannelStatusLabel_->setWordWrap(true);
     collaborationChannelStatusLabel_->setText(
-        QStringLiteral("协作频道：不可用（本构建未启用 Qt WebSockets）"));
+        QStringLiteral("协作频道：不可用。本构建未编入 Qt WebSockets，在线成员与实时协作无效。\n"
+                       "请在 Qt Maintenance Tool 中为当前 Kit 使用的 Qt 版本勾选「Qt WebSockets」，"
+                       "然后在工程中「运行 qmake」并执行完整重新构建。"));
     collaborationChannelButton_->setVisible(false);
     onlineMembersCaption_->setVisible(false);
     onlineMembersList_->setVisible(false);
@@ -158,6 +161,15 @@ void CollaborationPanelWidget::setWorkspaceKey(const QString &workspacePath)
     }
     const QString name = QFileInfo(workspacePath).fileName();
     collaborationProjectId_ = name.isEmpty() ? QStringLiteral("default") : name;
+}
+
+void CollaborationPanelWidget::setCollaborationProjectKey(const QString &projectKey)
+{
+    if (projectKey.isEmpty()) {
+        collaborationProjectId_ = QStringLiteral("default");
+        return;
+    }
+    collaborationProjectId_ = projectKey;
 }
 
 void CollaborationPanelWidget::setWorkspaceRoot(const QString &absoluteRootPath)

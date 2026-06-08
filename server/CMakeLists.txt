@@ -32,6 +32,7 @@ if(Drogon_FOUND)
         src/api/collaboration_ws_controller.cpp
         src/api/health_controller.cpp
         src/api/workspace_files_controller.cpp
+        src/api/workspaces_controller.cpp
         src/collaboration/redis_collab_store.cpp
     )
 

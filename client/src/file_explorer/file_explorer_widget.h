@@ -22,6 +22,8 @@ public:
 
 public slots:
     void setProjectRoot(const QString &projectPath);
+    /// Call after saving an existing path so the tree catches up if OS notifications were delayed.
+    void noteFileChangedOnDisk(const QString &absoluteFilePath);
 
 signals:
     void fileOpenRequested(const QString &filePath);
@@ -34,6 +36,7 @@ private:
     [[nodiscard]] QString selectedTargetDirectory() const;
     [[nodiscard]] static bool isValidEntryName(const QString &name);
     [[nodiscard]] static QString trimmedName(const QString &name);
+    void refreshAfterMutation(const QString &parentDir, const QString &highlightPath);
 
     QFileSystemModel *model_ = nullptr;
     QTreeView *treeView_ = nullptr;

@@ -9,6 +9,7 @@
 #include "workspace/recent_project_store.h"
 #include "workspace/workspace_compile_widget.h"
 #include "workspace/workspace_manager.h"
+#include "workspace/workspace_meta.h"
 #include "settings/server_endpoint_settings.h"
 
 #include <QAction>
@@ -27,12 +28,18 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QInputDialog>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QListWidget>
+#include <QListWidgetItem>
 #include <QKeySequence>
 #include <QPointer>
 #include <QProcess>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTabWidget>
+#include <QTimer>
 #include <QToolBar>
 #include <QVBoxLayout>
 #include <QUrl>
@@ -52,6 +59,21 @@ QString relativePathInWorkspace(const QString &workspaceRoot, const QString &abs
         return {};
     }
     return QDir::fromNativeSeparators(rel);
+}
+
+QString sanitizeLocalDirName(QString s)
+{
+    const QString forbidden = QStringLiteral("<>:\"/\\|?*");
+    QString out;
+    out.reserve(s.size());
+    for (const QChar c : s) {
+        if (forbidden.contains(c)) {
+            continue;
+        }
+        out.append(c);
+    }
+    out = out.trimmed();
+    return out.isEmpty() ? QStringLiteral("workspace") : out;
 }
 
 } // namespace
@@ -75,6 +97,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(workspaceManager_, &WorkspaceManager::projectOpened, this, &MainWindow::openProjectDirectory);
     openDefaultWorkspace();
+    updateWorkspaceChrome();
 }
 
 MainWindow::~MainWindow() = default;
@@ -84,9 +107,17 @@ void MainWindow::createActions()
     auto *fileMenu = menuBar()->addMenu(QStringLiteral("文件(&F)"));
     fileMenu->setObjectName(QStringLiteral("fileMenu"));
 
-    openProjectAction_ = fileMenu->addAction(QStringLiteral("打开项目(&O)..."));
+    openProjectAction_ = fileMenu->addAction(QStringLiteral("打开本地项目(&O)..."));
     openProjectAction_->setObjectName(QStringLiteral("openProjectAction"));
     connect(openProjectAction_, &QAction::triggered, this, &MainWindow::chooseProjectDirectory);
+
+    newServerWorkspaceAction_ = fileMenu->addAction(QStringLiteral("新建服务器工作区(&N)…"));
+    newServerWorkspaceAction_->setStatusTip(QStringLiteral("登录后在服务器注册工作区并创建本地目录"));
+    connect(newServerWorkspaceAction_, &QAction::triggered, this, &MainWindow::createServerWorkspaceFlow);
+
+    openServerWorkspaceAction_ = fileMenu->addAction(QStringLiteral("从服务器打开工作区(&S)…"));
+    openServerWorkspaceAction_->setStatusTip(QStringLiteral("浏览服务器上所有已注册工作区并下载到本地"));
+    connect(openServerWorkspaceAction_, &QAction::triggered, this, &MainWindow::openServerWorkspaceFlow);
 
     fileMenu->addSeparator();
 
@@ -118,6 +149,8 @@ void MainWindow::createActions()
     auto *mainToolBar = addToolBar(QStringLiteral("主工具栏"));
     mainToolBar->setObjectName(QStringLiteral("mainToolBar"));
     mainToolBar->addAction(openProjectAction_);
+    mainToolBar->addAction(newServerWorkspaceAction_);
+    mainToolBar->addAction(openServerWorkspaceAction_);
     mainToolBar->addAction(signInAction_);
     mainToolBar->addAction(saveAction_);
 
@@ -170,6 +203,11 @@ void MainWindow::createLayout()
     rootSplitter->setStretchFactor(0, 5);
     rootSplitter->setStretchFactor(1, 1);
 
+    workspacePathStatusLabel_ = new QLabel(this);
+    workspacePathStatusLabel_->setObjectName(QStringLiteral("workspacePathStatusLabel"));
+    workspacePathStatusLabel_->setMinimumWidth(280);
+    statusBar()->addWidget(workspacePathStatusLabel_, 1);
+
     authStatusPermanentLabel_ = new QLabel(this);
     authStatusPermanentLabel_->setObjectName(QStringLiteral("authStatusPermanentLabel"));
     statusBar()->addPermanentWidget(authStatusPermanentLabel_);
@@ -216,9 +254,11 @@ void MainWindow::createLayout()
             [this](bool ok, const QString &message, const QString &absoluteFilePath, qint64 newVersion, bool conflict,
                    qint64 serverLatestVersion) {
                 if (ok && newVersion >= 0) {
-                    editorArea_->setServerDocVersionForPath(absoluteFilePath, newVersion);
-                    collaborationPanel_->notifyLocalFileSynced(absoluteFilePath, newVersion);
-                    statusBar()->showMessage(QStringLiteral("已同步到服务器，版本 %1").arg(newVersion), 4000);
+                    if (collaborationPanel_ != nullptr && collaborationPanel_->isSignedIn()) {
+                        editorArea_->setServerDocVersionForPath(absoluteFilePath, newVersion);
+                        collaborationPanel_->notifyLocalFileSynced(absoluteFilePath, newVersion);
+                        statusBar()->showMessage(QStringLiteral("已同步到服务器，版本 %1").arg(newVersion), 4000);
+                    }
                     return;
                 }
                 if (conflict) {
@@ -234,6 +274,9 @@ void MainWindow::createLayout()
                     statusBar()->showMessage(QStringLiteral("同步服务器失败：%1").arg(message), 6000);
                 }
             });
+
+    connect(networkClient_, &NetworkClient::workspaceManifestFetched, this, &MainWindow::continuePullAfterManifest);
+    connect(networkClient_, &NetworkClient::workspaceLatestFileFetched, this, &MainWindow::onPullLatestFile);
 
     updateAuthChrome();
 
@@ -378,6 +421,7 @@ void MainWindow::openProjectDirectory(const QString &projectPath)
 {
     QDir().mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
     recentProjectStore_->addProject(projectPath);
+    editorArea_->closeAllTabs();
     currentWorkspaceRoot_ = QFileInfo(projectPath).absoluteFilePath();
     fileExplorer_->setProjectRoot(projectPath);
     taskRunner_->loadTasksFromWorkspace(projectPath);
@@ -385,11 +429,11 @@ void MainWindow::openProjectDirectory(const QString &projectPath)
     if (workspaceCompile_ != nullptr) {
         workspaceCompile_->setWorkspaceRoot(projectPath);
     }
-    collaborationPanel_->setWorkspaceKey(projectPath);
+    applyCollaborationAndChromeForWorkspace(projectPath);
     collaborationPanel_->setWorkspaceRoot(projectPath);
     collaborationPanel_->notifyCurrentFile(editorArea_->currentFilePath());
     refreshServerFileVersion(editorArea_->currentFilePath());
-    statusBar()->showMessage(QStringLiteral("已打开项目：%1").arg(projectPath));
+    statusBar()->showMessage(QStringLiteral("已打开工作区：%1").arg(currentWorkspaceRoot_), 8000);
 }
 
 void MainWindow::openWorkspaceTerminal(const QString &projectPath)
@@ -422,8 +466,20 @@ void MainWindow::saveCurrentFile()
         return;
     }
 
-    statusBar()->showMessage(QStringLiteral("文件已保存到本地，正在同步服务器…"), 4000);
-    pushSavedFileToServer(editorArea_->currentFilePath());
+    const QString savedPath = editorArea_->currentFilePath();
+    if (fileExplorer_ != nullptr) {
+        fileExplorer_->noteFileChangedOnDisk(savedPath);
+    }
+
+    if (collaborationPanel_ != nullptr && collaborationPanel_->isSignedIn()) {
+        statusBar()->showMessage(QStringLiteral("已保存到本地，随后上传服务器…"), 4000);
+        // 下一事件循环再读盘上传：新建文件时避免与刚关闭的写入句柄/索引竞争（Windows 上更稳）。
+        QTimer::singleShot(0, this, [this, savedPath]() {
+            pushSavedFileToServer(savedPath);
+        });
+    } else {
+        statusBar()->showMessage(QStringLiteral("已保存到本地（未登录，未上传服务器）"), 4000);
+    }
 }
 
 void MainWindow::updateAuthChrome()
@@ -432,8 +488,15 @@ void MainWindow::updateAuthChrome()
         return;
     }
     authStatusPermanentLabel_->setText(collaborationPanel_->authStatusLine());
+    const bool in = collaborationPanel_->isSignedIn();
     if (signOutAction_ != nullptr) {
-        signOutAction_->setEnabled(collaborationPanel_->isSignedIn());
+        signOutAction_->setEnabled(in);
+    }
+    if (newServerWorkspaceAction_ != nullptr) {
+        newServerWorkspaceAction_->setEnabled(in);
+    }
+    if (openServerWorkspaceAction_ != nullptr) {
+        openServerWorkspaceAction_->setEnabled(in);
     }
 }
 
@@ -532,4 +595,302 @@ void MainWindow::pushSavedFileToServer(const QString &absolutePath)
 
     networkClient_->putWorkspaceFileContent(baseUrl, collaborationPanel_->collaborationProjectKey(), rel,
                                             absolutePath, baseVer, content, token);
+}
+
+void MainWindow::applyCollaborationAndChromeForWorkspace(const QString &projectPath)
+{
+    const QString abs = QFileInfo(projectPath).absoluteFilePath();
+    if (const auto meta = WorkspaceMeta::load(abs)) {
+        collaborationPanel_->setCollaborationProjectKey(meta->serverWorkspaceId);
+        currentWorkspaceLabel_ =
+            meta->displayName.isEmpty() ? meta->serverWorkspaceId : meta->displayName;
+    } else {
+        collaborationPanel_->setWorkspaceKey(abs);
+        currentWorkspaceLabel_ = QFileInfo(abs).fileName();
+    }
+    updateWorkspaceChrome();
+}
+
+void MainWindow::updateWorkspaceChrome()
+{
+    if (workspacePathStatusLabel_ != nullptr) {
+        workspacePathStatusLabel_->setText(
+            QStringLiteral("当前工作区目录：%1")
+                .arg(currentWorkspaceRoot_.isEmpty() ? QStringLiteral("(未打开)") : currentWorkspaceRoot_));
+    }
+    const QString titleName = currentWorkspaceLabel_.isEmpty() ? QStringLiteral("未打开") : currentWorkspaceLabel_;
+    setWindowTitle(QStringLiteral("Toide — %1").arg(titleName));
+}
+
+void MainWindow::clearPullState()
+{
+    pullQueue_.clear();
+    pullLocalRoot_.clear();
+    pullProjectKey_.clear();
+    pullDisplayName_.clear();
+    pullToken_.clear();
+    pullBaseUrl_ = QUrl();
+    pullIndex_ = 0;
+}
+
+void MainWindow::createServerWorkspaceFlow()
+{
+    if (collaborationPanel_ == nullptr || !collaborationPanel_->isSignedIn()) {
+        QMessageBox::information(this,
+                                 QStringLiteral("需要登录"),
+                                 QStringLiteral("请先在「账号」中登录服务器，再创建服务器工作区。"));
+        return;
+    }
+    bool nameOk = false;
+    const QString name =
+        QInputDialog::getText(this, QStringLiteral("新建服务器工作区"), QStringLiteral("工作区显示名称："),
+                              QLineEdit::Normal, QString(), &nameOk)
+            .trimmed();
+    if (!nameOk || name.isEmpty()) {
+        return;
+    }
+    const QString parentDir = QFileDialog::getExistingDirectory(
+        this,
+        QStringLiteral("选择本地父目录（将创建子文件夹）"),
+        workspaceManager_->currentProjectPath().isEmpty() ? QDir::homePath()
+                                                           : workspaceManager_->currentProjectPath());
+    if (parentDir.isEmpty()) {
+        return;
+    }
+
+    const QUrl baseUrl(collaborationPanel_->collaborationServerBaseUrl());
+    const QString token = collaborationPanel_->authBearerToken();
+
+    QMetaObject::Connection conn;
+    conn = connect(
+        networkClient_, &NetworkClient::workspaceCreated, this,
+        [this, conn, parentDir, name](bool ok, const QString &message, const QString &id, const QString &srvName) mutable {
+            QObject::disconnect(conn);
+            if (!ok) {
+                QMessageBox::warning(this, QStringLiteral("创建工作区失败"), message);
+                return;
+            }
+            const QString localSegment =
+                sanitizeLocalDirName(srvName) + QLatin1Char('-') + id.left(8).remove(QLatin1Char('-'));
+            const QString localRoot = QDir(QDir::cleanPath(parentDir)).filePath(localSegment);
+            if (QFileInfo::exists(localRoot)) {
+                QMessageBox::warning(this,
+                                     QStringLiteral("目录已存在"),
+                                     QStringLiteral("目标文件夹已存在：\n%1").arg(localRoot));
+                return;
+            }
+            if (!QDir().mkpath(localRoot)) {
+                QMessageBox::warning(this, QStringLiteral("创建失败"), QStringLiteral("无法创建本地目录。"));
+                return;
+            }
+            WorkspaceMeta meta;
+            meta.serverWorkspaceId = id;
+            meta.displayName = srvName.isEmpty() ? name : srvName;
+            if (!WorkspaceMeta::save(localRoot, meta)) {
+                QMessageBox::warning(this, QStringLiteral("写入失败"), QStringLiteral("无法写入 .toide/workspace.json。"));
+                return;
+            }
+            const QString toideDir = QDir(localRoot).filePath(QStringLiteral(".toide"));
+            if (!QDir().mkpath(toideDir)) {
+                QMessageBox::warning(this, QStringLiteral("创建失败"), QStringLiteral("无法创建 .toide 目录。"));
+                return;
+            }
+            QFile tasksFile(QDir(toideDir).filePath(QStringLiteral("tasks.json")));
+            if (tasksFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                tasksFile.write("{\n  \"tasks\": []\n}\n");
+                tasksFile.close();
+            }
+            statusBar()->showMessage(QStringLiteral("已在服务器注册工作区并打开本地副本。"), 6000);
+            workspaceManager_->openProject(localRoot);
+        });
+    networkClient_->createWorkspace(baseUrl, name, token);
+}
+
+void MainWindow::openServerWorkspaceFlow()
+{
+    if (collaborationPanel_ == nullptr || !collaborationPanel_->isSignedIn()) {
+        QMessageBox::information(this,
+                                 QStringLiteral("需要登录"),
+                                 QStringLiteral("请先在「账号」中登录服务器，再从服务器打开工作区。"));
+        return;
+    }
+    const QUrl baseUrl(collaborationPanel_->collaborationServerBaseUrl());
+    const QString token = collaborationPanel_->authBearerToken();
+
+    QMetaObject::Connection conn;
+    conn = connect(networkClient_, &NetworkClient::workspacesListFetched, this,
+                   [this, conn, baseUrl, token](bool ok, const QString &message, const QJsonArray &workspaces) mutable {
+                       QObject::disconnect(conn);
+                       if (!ok) {
+                           QMessageBox::warning(this, QStringLiteral("无法获取列表"), message);
+                           return;
+                       }
+                       if (workspaces.isEmpty()) {
+                           QMessageBox::information(this,
+                                                    QStringLiteral("暂无工作区"),
+                                                    QStringLiteral("服务器上还没有任何已注册工作区。"));
+                           return;
+                       }
+
+                       QDialog pickDialog(this);
+                       pickDialog.setWindowTitle(QStringLiteral("选择服务器工作区"));
+                       pickDialog.resize(520, 360);
+                       auto *listWidget = new QListWidget(&pickDialog);
+                       for (const QJsonValue &v : workspaces) {
+                           const QJsonObject o = v.toObject();
+                           const QString wid = o.value(QStringLiteral("id")).toString();
+                           const QString wname = o.value(QStringLiteral("name")).toString();
+                           const QString creator =
+                               o.value(QStringLiteral("createdByUsername")).toString();
+                           auto *item = new QListWidgetItem(
+                               QStringLiteral("%1  （创建者：%2）\nID %3")
+                                   .arg(wname, creator.isEmpty() ? QStringLiteral("?") : creator, wid));
+                           item->setData(Qt::UserRole, wid);
+                           item->setData(Qt::UserRole + 1, wname);
+                           listWidget->addItem(item);
+                       }
+                       auto *openBtn = new QPushButton(QStringLiteral("打开并下载"), &pickDialog);
+                       auto *cancelBtn = new QPushButton(QStringLiteral("取消"), &pickDialog);
+                       auto *row = new QHBoxLayout();
+                       row->addStretch(1);
+                       row->addWidget(openBtn);
+                       row->addWidget(cancelBtn);
+                       auto *lay = new QVBoxLayout(&pickDialog);
+                       lay->addWidget(listWidget);
+                       lay->addLayout(row);
+                       QObject::connect(openBtn, &QPushButton::clicked, &pickDialog, &QDialog::accept);
+                       QObject::connect(cancelBtn, &QPushButton::clicked, &pickDialog, &QDialog::reject);
+                       if (pickDialog.exec() != QDialog::Accepted) {
+                           return;
+                       }
+                       QListWidgetItem *cur = listWidget->currentItem();
+                       if (cur == nullptr) {
+                           QMessageBox::information(this, QStringLiteral("未选择"), QStringLiteral("请选择一行工作区。"));
+                           return;
+                       }
+                       const QString wsId = cur->data(Qt::UserRole).toString();
+                       const QString wsName = cur->data(Qt::UserRole + 1).toString();
+                       const QString parentDir = QFileDialog::getExistingDirectory(
+                           this,
+                           QStringLiteral("选择本地父目录（将创建子文件夹）"),
+                           workspaceManager_->currentProjectPath().isEmpty() ? QDir::homePath()
+                                                                              : workspaceManager_->currentProjectPath());
+                       if (parentDir.isEmpty()) {
+                           return;
+                       }
+                       const QString localSegment =
+                           sanitizeLocalDirName(wsName) + QLatin1Char('-') + wsId.left(8).remove(QLatin1Char('-'));
+                       const QString localRoot = QDir(QDir::cleanPath(parentDir)).filePath(localSegment);
+                       if (QFileInfo::exists(localRoot)) {
+                           QMessageBox::warning(
+                               this,
+                               QStringLiteral("目录已存在"),
+                               QStringLiteral("目标文件夹已存在，请删除或更换父目录：\n%1").arg(localRoot));
+                           return;
+                       }
+                       if (!QDir().mkpath(localRoot)) {
+                           QMessageBox::warning(this, QStringLiteral("创建失败"), QStringLiteral("无法创建本地目录。"));
+                           return;
+                       }
+                       WorkspaceMeta meta;
+                       meta.serverWorkspaceId = wsId;
+                       meta.displayName = wsName;
+                       if (!WorkspaceMeta::save(localRoot, meta)) {
+                           QMessageBox::warning(this, QStringLiteral("写入失败"), QStringLiteral("无法写入 .toide/workspace.json。"));
+                           return;
+                       }
+                       const QString toideDir = QDir(localRoot).filePath(QStringLiteral(".toide"));
+                       QFile tasksFile(QDir(toideDir).filePath(QStringLiteral("tasks.json")));
+                       if (tasksFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                           tasksFile.write("{\n  \"tasks\": []\n}\n");
+                           tasksFile.close();
+                       }
+
+                       pullLocalRoot_ = localRoot;
+                       pullProjectKey_ = wsId;
+                       pullDisplayName_ = wsName;
+                       pullToken_ = token;
+                       pullBaseUrl_ = baseUrl;
+                       pullIndex_ = 0;
+                       pullQueue_.clear();
+                       statusBar()->showMessage(QStringLiteral("正在从服务器获取文件清单…"), 3000);
+                       networkClient_->fetchWorkspaceManifest(baseUrl, wsId, token);
+                   });
+    networkClient_->listWorkspaces(baseUrl, token);
+}
+
+void MainWindow::continuePullAfterManifest(bool ok, const QString &message, const QJsonArray &files)
+{
+    if (pullLocalRoot_.isEmpty()) {
+        return;
+    }
+    if (!ok) {
+        QMessageBox::warning(this, QStringLiteral("清单获取失败"), message);
+        clearPullState();
+        return;
+    }
+    pullQueue_.clear();
+    for (const QJsonValue &v : files) {
+        const QJsonObject o = v.toObject();
+        const QString path = o.value(QStringLiteral("path")).toString();
+        const qint64 ver = o.value(QStringLiteral("version")).toVariant().toLongLong();
+        if (!path.isEmpty()) {
+            pullQueue_.append(qMakePair(path, ver));
+        }
+    }
+    pullIndex_ = 0;
+    if (pullQueue_.isEmpty()) {
+        const QString done = pullLocalRoot_;
+        clearPullState();
+        workspaceManager_->openProject(done);
+        statusBar()->showMessage(QStringLiteral("工作区已在本地打开（服务器上尚无文件）。"), 5000);
+        return;
+    }
+    statusBar()->showMessage(QStringLiteral("正在下载文件…"), 3000);
+    networkClient_->fetchWorkspaceLatestFile(pullBaseUrl_, pullProjectKey_, pullQueue_.at(0).first, pullToken_);
+}
+
+void MainWindow::onPullLatestFile(bool ok,
+                                  const QString &message,
+                                  const QString &relativePath,
+                                  const QString &content,
+                                  qint64 version)
+{
+    if (pullLocalRoot_.isEmpty()) {
+        return;
+    }
+    if (!ok) {
+        QMessageBox::warning(this,
+                             QStringLiteral("下载文件失败"),
+                             QStringLiteral("%1\n%2").arg(relativePath, message));
+        clearPullState();
+        return;
+    }
+    const QString fullPath = QDir(pullLocalRoot_).filePath(relativePath);
+    const QFileInfo fi(fullPath);
+    if (!QDir().mkpath(fi.path())) {
+        QMessageBox::warning(this, QStringLiteral("写入失败"), QStringLiteral("无法创建目录：%1").arg(fi.path()));
+        clearPullState();
+        return;
+    }
+    QFile out(fullPath);
+    if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        QMessageBox::warning(this, QStringLiteral("写入失败"), QStringLiteral("无法写入：%1").arg(fullPath));
+        clearPullState();
+        return;
+    }
+    out.write(content.toUtf8());
+    out.close();
+    editorArea_->setServerDocVersionForPath(fullPath, version);
+
+    pullIndex_++;
+    if (pullIndex_ >= pullQueue_.size()) {
+        const QString done = pullLocalRoot_;
+        clearPullState();
+        workspaceManager_->openProject(done);
+        statusBar()->showMessage(QStringLiteral("已从服务器拉取所有文件并打开工作区。"), 6000);
+        return;
+    }
+    networkClient_->fetchWorkspaceLatestFile(pullBaseUrl_, pullProjectKey_, pullQueue_.at(pullIndex_).first,
+                                             pullToken_);
 }

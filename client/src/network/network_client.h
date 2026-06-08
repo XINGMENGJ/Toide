@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QJsonArray>
 #include <QNetworkAccessManager>
 #include <QObject>
 #include <QUrl>
@@ -13,6 +14,14 @@ public:
     void checkHealth(const QUrl &serverBaseUrl);
     void login(const QUrl &serverBaseUrl, const QString &username, const QString &password);
     void registerUser(const QUrl &serverBaseUrl, const QString &username, const QString &password);
+
+    void listWorkspaces(const QUrl &serverBaseUrl, const QString &bearerToken);
+    void createWorkspace(const QUrl &serverBaseUrl, const QString &name, const QString &bearerToken);
+    void fetchWorkspaceManifest(const QUrl &serverBaseUrl, const QString &projectKey, const QString &bearerToken);
+    void fetchWorkspaceLatestFile(const QUrl &serverBaseUrl,
+                                  const QString &projectKey,
+                                  const QString &relativePath,
+                                  const QString &bearerToken);
 
     void fetchWorkspaceFileVersion(const QUrl &serverBaseUrl,
                                    const QString &projectKey,
@@ -30,6 +39,14 @@ public:
 signals:
     void healthChecked(bool online, const QString &message);
     void authFinished(bool ok, const QString &message, const QString &token, const QString &username);
+    void workspacesListFetched(bool ok, const QString &message, const QJsonArray &workspaces);
+    void workspaceCreated(bool ok, const QString &message, const QString &id, const QString &name);
+    void workspaceManifestFetched(bool ok, const QString &message, const QJsonArray &files);
+    void workspaceLatestFileFetched(bool ok,
+                                    const QString &message,
+                                    const QString &relativePath,
+                                    const QString &content,
+                                    qint64 version);
     void workspaceFileVersionFetched(bool ok,
                                      const QString &message,
                                      const QString &absoluteFilePath,

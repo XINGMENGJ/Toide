@@ -142,6 +142,119 @@ void WorkspaceFilesController::getVersion(const drogon::HttpRequestPtr &req,
     }
 }
 
+void WorkspaceFilesController::getManifest(const drogon::HttpRequestPtr &req,
+                                           std::function<void(const drogon::HttpResponsePtr &)> &&callback) const
+{
+    Json::Value err(Json::objectValue);
+    auth::AuthenticatedUser user;
+    if (!requireAuth(req, user, err)) {
+        callback(jsonHttp(err, drogon::k401Unauthorized));
+        return;
+    }
+
+    try {
+        auto db = drogon::app().getDbClient("default");
+        if (!db) {
+            err["error"]["code"] = "INTERNAL_ERROR";
+            err["error"]["message"] = "Database not configured.";
+            callback(jsonHttp(err, drogon::k503ServiceUnavailable));
+            return;
+        }
+        ensureWorkspaceFilesTable(db);
+
+        const std::string projectKey = req->getParameter("projectKey");
+        if (projectKey.empty()) {
+            err["error"]["code"] = "INVALID_REQUEST";
+            err["error"]["message"] = "projectKey is required.";
+            callback(jsonHttp(err, drogon::k400BadRequest));
+            return;
+        }
+
+        const auto r = db->execSqlSync(
+            "SELECT file_path, MAX(version) AS v FROM workspace_file_versions WHERE project_key=? GROUP BY file_path "
+            "ORDER BY file_path",
+            projectKey);
+
+        Json::Value files(Json::arrayValue);
+        for (const auto &row : r) {
+            Json::Value item(Json::objectValue);
+            item["path"] = row["file_path"].as<std::string>();
+            item["version"] = static_cast<Json::Int64>(row["v"].as<int64_t>());
+            files.append(item);
+        }
+
+        Json::Value ok(Json::objectValue);
+        ok["projectKey"] = projectKey;
+        ok["files"] = files;
+        callback(jsonHttp(ok));
+    } catch (const std::exception &e) {
+        err["error"]["code"] = "INTERNAL_ERROR";
+        err["error"]["message"] = e.what();
+        callback(jsonHttp(err, drogon::k500InternalServerError));
+    }
+}
+
+void WorkspaceFilesController::getLatest(const drogon::HttpRequestPtr &req,
+                                         std::function<void(const drogon::HttpResponsePtr &)> &&callback) const
+{
+    Json::Value err(Json::objectValue);
+    auth::AuthenticatedUser user;
+    if (!requireAuth(req, user, err)) {
+        callback(jsonHttp(err, drogon::k401Unauthorized));
+        return;
+    }
+
+    try {
+        auto db = drogon::app().getDbClient("default");
+        if (!db) {
+            err["error"]["code"] = "INTERNAL_ERROR";
+            err["error"]["message"] = "Database not configured.";
+            callback(jsonHttp(err, drogon::k503ServiceUnavailable));
+            return;
+        }
+        ensureWorkspaceFilesTable(db);
+
+        const std::string projectKey = req->getParameter("projectKey");
+        const std::string filePath = req->getParameter("path");
+        if (projectKey.empty() || filePath.empty()) {
+            err["error"]["code"] = "INVALID_REQUEST";
+            err["error"]["message"] = "projectKey and path are required.";
+            callback(jsonHttp(err, drogon::k400BadRequest));
+            return;
+        }
+        if (filePath.size() > 512) {
+            err["error"]["code"] = "INVALID_REQUEST";
+            err["error"]["message"] = "path is too long.";
+            callback(jsonHttp(err, drogon::k400BadRequest));
+            return;
+        }
+
+        const auto r = db->execSqlSync(
+            "SELECT file_path, version, content FROM workspace_file_versions WHERE project_key=? AND file_path=? ORDER "
+            "BY version DESC LIMIT 1",
+            projectKey,
+            filePath);
+
+        if (r.empty()) {
+            err["error"]["code"] = "NOT_FOUND";
+            err["error"]["message"] = "No content for this file.";
+            callback(jsonHttp(err, drogon::k404NotFound));
+            return;
+        }
+
+        Json::Value ok(Json::objectValue);
+        ok["projectKey"] = projectKey;
+        ok["filePath"] = r[0]["file_path"].as<std::string>();
+        ok["version"] = static_cast<Json::Int64>(r[0]["version"].as<int64_t>());
+        ok["content"] = r[0]["content"].as<std::string>();
+        callback(jsonHttp(ok));
+    } catch (const std::exception &e) {
+        err["error"]["code"] = "INTERNAL_ERROR";
+        err["error"]["message"] = e.what();
+        callback(jsonHttp(err, drogon::k500InternalServerError));
+    }
+}
+
 void WorkspaceFilesController::putContent(const drogon::HttpRequestPtr &req,
                                           std::function<void(const drogon::HttpResponsePtr &)> &&callback) const
 {

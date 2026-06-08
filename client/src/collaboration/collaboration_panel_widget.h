@@ -31,6 +31,7 @@ public:
 
     void setServerStatus(bool online, const QString &message);
     void setWorkspaceKey(const QString &workspacePath);
+    void setCollaborationProjectKey(const QString &projectKey);
     void setWorkspaceRoot(const QString &absoluteRootPath);
 
     void notifyCurrentFile(const QString &absoluteFilePath);

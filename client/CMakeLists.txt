@@ -25,6 +25,7 @@ set(TOIDE_CLIENT_CORE_SOURCES
     src/workspace/recent_project_store.cpp
     src/workspace/workspace_compile_widget.cpp
     src/workspace/workspace_manager.cpp
+    src/workspace/workspace_meta.cpp
 )
 
 if(TARGET Qt6::WebSockets)
@@ -77,7 +78,8 @@ else()
     target_compile_options(toide_client_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-qt_add_executable(toide_client
+# WIN32: GUI subsystem on Windows — avoids an extra black console window when double‑clicking the exe.
+qt_add_executable(toide_client WIN32
     src/main.cpp
 )
 
